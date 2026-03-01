@@ -1,0 +1,9 @@
+embedding_model: models/gemini-embedding-001
+gemini_api_key set: True
+Parsing: data/uploads/Resum.pdf
+Pages extracted: 1
+  Page 1: 0 chars
+Chunks created: 0
+Texts to embed: 0
+ERROR: No texts!
+DONE
