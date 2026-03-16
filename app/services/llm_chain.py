@@ -41,7 +41,7 @@ def _format_context(chunks: List[Dict[str, Any]]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
-def _retry_on_429(func, *args, max_retries: int = 3, **kwargs):
+def _retry_on_429(func, *args, max_retries: int = 1, **kwargs):
     """Retry a function call with exponential backoff on 429 rate-limit errors."""
     for attempt in range(max_retries + 1):
         try:
@@ -126,6 +126,38 @@ def _generate_openai(context: str, query: str, history: List[Dict[str, str]] | N
     return response.choices[0].message.content or ""
 
 
+def _generate_huggingface(context: str, query: str, history: List[Dict[str, str]] | None = None) -> str:
+    """Generate answer using Hugging Face Serverless Inference API."""
+    import requests as _requests
+
+    headers = {
+        "Authorization": f"Bearer {settings.hf_token}",
+        "Content-Type": "application/json"
+    }
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if history:
+        messages.extend(history)
+    messages.append({"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"})
+
+    url = "https://router.huggingface.co/v1/chat/completions"
+
+    payload = {
+        "model": settings.llm_model,
+        "messages": messages,
+        "temperature": settings.llm_temperature,
+        "max_tokens": settings.llm_max_tokens,
+    }
+
+    resp = _requests.post(url, headers=headers, json=payload, timeout=120)
+
+    if resp.status_code != 200:
+        raise ValueError(f"Hugging Face API Error: {resp.status_code} - {resp.text}")
+
+    data = resp.json()
+    return data["choices"][0]["message"]["content"]
+
+
 def _generate_ollama(context: str, query: str, history: List[Dict[str, str]] | None = None) -> str:
     """Generate answer using a local Ollama model."""
     import requests as _requests
@@ -181,6 +213,8 @@ def generate_answer(
         return _generate_gemini(context, query, history)
     elif provider == "openai":
         return _generate_openai(context, query, history)
+    elif provider == "huggingface":
+        return _generate_huggingface(context, query, history)
     elif provider == "ollama":
         return _generate_ollama(context, query, history)
     else:

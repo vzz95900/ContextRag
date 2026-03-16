@@ -1,0 +1,98 @@
+============================================================
+DEBUG: Testing PDF ingestion pipeline
+============================================================
+LLM Provider:       gemini
+LLM Model:          gemini-2.0-flash
+Embedding Provider: gemini
+Embedding Model:    models/embedding-001
+Gemini API Key:     AIzaSyAmlU...
+
+Found 4 PDFs
+
+Testing with: Greedy.pdf
+Parsed 21 pages OK
+Chunked into 21 chunks OK
+EMBED ERROR: [Errno 11001] getaddrinfo failed
+Traceback (most recent call last):
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpx\_transports\default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpx\_transports\default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpcore\_sync\connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+        pool_request.request
+    )
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 101, in handle_request
+    raise exc
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpcore\_sync\connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpcore\_backends\sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\VIJAY BYADWAL\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpcore\_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectError: [Errno 11001] getaddrinfo failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\tmp\debug_ingest2.py", line 60, in <module>
+    embeddings = embed_texts(texts)
+  File "d:\Pjts\CntextAware\app\services\embedder.py", line 95, in embed_texts
+    return _embed_gemini(texts)
+  File "d:\Pjts\CntextAware\app\services\embedder.py", line 41, in _embed_gemini
+    result = _retry_on_429(
+        client.models.embed_content,
+        model=settings.embedding_model,
+        contents=batch,
+    )
+  File "d:\Pjts\CntextAware\app\services\embedder.py", line 18, in _retry_on_429
+    return func(*args, **kwargs)
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\google\genai\models.py", line 4160, in embed_content
+    response_dict = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\google\genai\_api_client.py", line 726, in request
+    response = self._request(http_request, stream=False)
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\google\genai\_api_client.py", line 648, in _request
+    response = self._httpx_client.request(
+        method=http_request.method,
+    ...<3 lines>...
+        timeout=http_request.timeout,
+    )
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpx\_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpx\_client.py", line 914, in send
+    response = self._send_handling_auth(
+        request,
+    ...<2 lines>...
+        history=[],
+    )
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpx\_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+        request,
+        follow_redirects=follow_redirects,
+        history=history,
+    )
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpx\_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpx\_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpx\_transports\default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\VIJAY BYADWAL\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "D:\Pjts\CntextAware\.venv\Lib\site-packages\httpx\_transports\default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectError: [Errno 11001] getaddrinfo failed
+

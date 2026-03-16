@@ -20,17 +20,18 @@ class Settings(BaseSettings):
     # ── API Keys ────────────────────────────────────────────
     openai_api_key: str = ""
     gemini_api_key: str = ""
+    hf_token: str = ""
 
     # ── LLM ─────────────────────────────────────────────────
-    llm_provider: str = "ollama"  # gemini | openai | ollama
-    llm_model: str = "llama3.2"
+    llm_provider: str = "huggingface"  # gemini | openai | ollama | huggingface
+    llm_model: str = "Qwen/Qwen2.5-72B-Instruct"
     llm_temperature: float = 0.0
     llm_max_tokens: int = 1024
     ollama_base_url: str = "http://localhost:11434"
 
     # ── Embeddings ──────────────────────────────────────────
-    embedding_provider: str = "local"  # gemini | openai | local
-    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_provider: str = "gemini"  # gemini | openai | local
+    embedding_model: str = "gemini-embedding-001"
 
     # ── Vector Store ────────────────────────────────────────
     vector_store_provider: str = "chromadb"  # chromadb | faiss

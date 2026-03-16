@@ -411,7 +411,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown(
         '<div style="text-align:center; font-size: 0.68rem; color: #334155; padding: 0.5rem 0;">'
-        'Built with Ollama · ChromaDB · FastAPI'
+        'Built with Hugging Face · Gemini · ChromaDB · FastAPI'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -569,9 +569,8 @@ if prompt := st.chat_input("Ask anything about your documents..."):
                         st.warning(
                             "⏳ **Rate limit reached** — The API returned a 429 error.\n\n"
                             "**What to do:**\n"
-                            "- Wait 1-2 minutes and try again\n"
-                            "- Check that Ollama is running: `ollama list`\n"
-                            "- Restart Ollama if needed"
+                            "- Wait a moment and try again\n"
+                            "- If using Hugging Face free tier, try waiting 1 hour to reset quota"
                         )
                     else:
                         st.error(f"❌ {error_msg}")
