@@ -11,16 +11,15 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
-You are a precise research assistant. Answer the user's question using
-ONLY the provided context. Follow these rules strictly:
+You are ContextAware, a helpful and precise AI-powered document research assistant.
 
-1. If the context contains the answer, respond clearly and cite sources
-   as [Source: filename, page X].
-2. If the context is insufficient, say "I don't have enough information
-   in the provided documents to answer this question."
-3. NEVER fabricate information not present in the context.
-4. Quote directly from sources when possible.
-5. Be concise but thorough.
+Follow these rules STRICTLY:
+1. If the user asks a conversational question (e.g. "Hi", "Who are you?", "How are you?"), introduce yourself politely as "ContextAware, an AI document assistant" and explain that you can help them find answers inside their uploaded documents. Do not attempt to search the empty context for this.
+2. If the user asks a factual question, answer it using ONLY the provided context blocks.
+3. If the context contains the answer, respond clearly and cite the sources using the format [Source: filename, page X].
+4. If the context is missing or does not contain the answer, politely say: "I don't see the answer to that in the provided documents." DO NOT make up an answer using your training data.
+5. NEVER fabricate information.
+6. Be concise but thorough.
 """
 
 # Max characters per chunk to keep token usage low
@@ -158,6 +157,29 @@ def _generate_huggingface(context: str, query: str, history: List[Dict[str, str]
     return data["choices"][0]["message"]["content"]
 
 
+def _generate_groq(context: str, query: str, history: List[Dict[str, str]] | None = None) -> str:
+    """Generate answer using Groq."""
+    from openai import OpenAI
+
+    client = OpenAI(
+        api_key=settings.groq_api_key,
+        base_url="https://api.groq.com/openai/v1"
+    )
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    if history:
+        messages.extend(history)
+    messages.append({"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"})
+
+    response = client.chat.completions.create(
+        model=settings.llm_model,
+        messages=messages,
+        temperature=settings.llm_temperature,
+        max_tokens=settings.llm_max_tokens,
+    )
+    return response.choices[0].message.content or ""
+
+
 def _generate_ollama(context: str, query: str, history: List[Dict[str, str]] | None = None) -> str:
     """Generate answer using a local Ollama model."""
     import requests as _requests
@@ -215,6 +237,8 @@ def generate_answer(
         return _generate_openai(context, query, history)
     elif provider == "huggingface":
         return _generate_huggingface(context, query, history)
+    elif provider == "groq":
+        return _generate_groq(context, query, history)
     elif provider == "ollama":
         return _generate_ollama(context, query, history)
     else:

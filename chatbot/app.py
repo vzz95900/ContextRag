@@ -407,11 +407,45 @@ with st.sidebar:
     except Exception as e:
         st.warning(f"⚠️ Could not load documents: {e}")
 
+    # ── Chat History ────────────────────────────────────────
+    st.markdown('<div class="section-label">💬 Past Chats</div>', unsafe_allow_html=True)
+    
+    if st.button("✨ New Chat", use_container_width=True):
+        st.session_state.messages = []
+        st.session_state.session_id = None
+        st.rerun()
+
+    try:
+        chat_resp = requests.get(f"{API_BASE}/api/chats", timeout=5)
+        if chat_resp.status_code == 200:
+            past_chats = chat_resp.json().get("sessions", [])
+            if past_chats:
+                for chat in past_chats:
+                    col1, col2 = st.columns([5, 1])
+                    with col1:
+                        if st.button(f"💬 {chat['title'][:25]}", key=f"load_{chat['session_id']}"):
+                            res = requests.get(f"{API_BASE}/api/chats/{chat['session_id']}")
+                            if res.status_code == 200:
+                                st.session_state.session_id = chat['session_id']
+                                st.session_state.messages = res.json().get("messages", [])
+                                st.rerun()
+                    with col2:
+                        if st.button("🗑️", key=f"del_chat_{chat['session_id']}", help="Delete chat"):
+                            requests.delete(f"{API_BASE}/api/chats/{chat['session_id']}")
+                            if st.session_state.session_id == chat['session_id']:
+                                st.session_state.messages = []
+                                st.session_state.session_id = None
+                            st.rerun()
+            else:
+                st.markdown('<p style="font-size:0.8rem; color:#64748b; text-align:center;">No past chats</p>', unsafe_allow_html=True)
+    except Exception:
+        pass
+
     # ── Footer ──────────────────────────────────────────────
     st.markdown("---")
     st.markdown(
         '<div style="text-align:center; font-size: 0.68rem; color: #334155; padding: 0.5rem 0;">'
-        'Built with Hugging Face · Gemini · ChromaDB · FastAPI'
+        'Built with Groq · Gemini · ChromaDB · FastAPI'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -518,11 +552,17 @@ if prompt := st.chat_input("Ask anything about your documents..."):
 
     # Get RAG response
     with st.chat_message("assistant", avatar="🧠"):
+        stop_btn = st.button("🛑 Stop Generation", key=f"stop_{len(st.session_state.messages)}")
+        if stop_btn:
+            st.warning("Generation stopped by user.")
+            st.stop()
+            
         with st.spinner("🔍 Searching & reasoning..."):
             try:
                 payload = {
                     "query": prompt,
                     "session_id": st.session_state.session_id,
+                    "history": st.session_state.messages[:-1]
                 }
                 if _selected_doc_id:
                     payload["filters"] = {"doc_id": _selected_doc_id}

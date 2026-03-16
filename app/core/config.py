@@ -21,10 +21,11 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     gemini_api_key: str = ""
     hf_token: str = ""
+    groq_api_key: str = ""
 
     # ── LLM ─────────────────────────────────────────────────
-    llm_provider: str = "huggingface"  # gemini | openai | ollama | huggingface
-    llm_model: str = "Qwen/Qwen2.5-72B-Instruct"
+    llm_provider: str = "groq"  # gemini | openai | ollama | huggingface | groq
+    llm_model: str = "llama-3.3-70b-versatile"
     llm_temperature: float = 0.0
     llm_max_tokens: int = 1024
     ollama_base_url: str = "http://localhost:11434"

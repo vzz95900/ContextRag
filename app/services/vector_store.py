@@ -28,6 +28,9 @@ class ChromaStore:
                 name=collection_name,
                 metadata={"hnsw:space": "cosine"},
             )
+            self._chat_collection = self._client.get_or_create_collection(
+                name="chat_histories",
+            )
         except (ValueError, AttributeError) as e:
             # Corrupted or incompatible DB — wipe and recreate
             import logging
@@ -40,6 +43,9 @@ class ChromaStore:
             self._collection = self._client.get_or_create_collection(
                 name=collection_name,
                 metadata={"hnsw:space": "cosine"},
+            )
+            self._chat_collection = self._client.get_or_create_collection(
+                name="chat_histories",
             )
 
     @property
@@ -120,6 +126,47 @@ class ChromaStore:
         for d in docs.values():
             d["page_count"] = len(d.pop("pages"))
         return list(docs.values())
+
+    # ── Chat Histories ────────────────────────────────────────
+
+    def save_chat(self, session_id: str, title: str, messages: list) -> None:
+        import json
+        from datetime import datetime
+        self._chat_collection.upsert(
+            ids=[session_id],
+            embeddings=[[0.0] * 384],  # Dummy embedding to bypass default model
+            documents=[json.dumps(messages)],
+            metadatas=[{
+                "title": title,
+                "updated_at": datetime.utcnow().isoformat()
+            }]
+        )
+
+    def get_chat(self, session_id: str) -> dict | None:
+        import json
+        results = self._chat_collection.get(ids=[session_id])
+        if not results["ids"]:
+            return None
+        return {
+            "session_id": results["ids"][0],
+            "title": results["metadatas"][0]["title"],
+            "messages": json.loads(results["documents"][0])
+        }
+
+    def list_chats(self) -> list:
+        results = self._chat_collection.get(include=["metadatas"])
+        chats = []
+        for i, sid in enumerate(results["ids"]):
+            chats.append({
+                "session_id": sid,
+                "title": results["metadatas"][i]["title"],
+                "updated_at": results["metadatas"][i]["updated_at"]
+            })
+        chats.sort(key=lambda x: x["updated_at"], reverse=True)
+        return chats
+
+    def delete_chat(self, session_id: str) -> None:
+        self._chat_collection.delete(ids=[session_id])
 
 
 # ── Factory ─────────────────────────────────────────────────

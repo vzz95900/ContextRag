@@ -12,8 +12,9 @@ tiktoken>=0.7.0
 # Embeddings & Reranking (local)
 sentence-transformers>=3.0.0
 
-# LLM — Gemini (optional, only if using gemini provider)
+# LLM Integrations
 google-genai>=1.0.0
+openai>=1.13.3
 
 # Vector Store
 chromadb>=0.5.0

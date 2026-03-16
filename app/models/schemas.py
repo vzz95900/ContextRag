@@ -17,6 +17,26 @@ class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=5000, description="User question")
     session_id: Optional[str] = Field(None, description="Conversation session ID")
     filters: Optional[dict] = Field(None, description="Metadata filters (e.g. doc_id, page)")
+    history: Optional[List[dict]] = Field(None, description="Past messages in the conversation")
+
+
+class ChatHistoryInfo(BaseModel):
+    """Metadata about a past chat session."""
+    session_id: str
+    title: str
+    updated_at: str
+
+
+class ChatHistoryListResponse(BaseModel):
+    """List of past chat sessions."""
+    sessions: List[ChatHistoryInfo] = []
+
+
+class ChatSessionResponse(BaseModel):
+    """A full chat session with messages."""
+    session_id: str
+    title: str
+    messages: List[dict]
 
 
 class SourceCitation(BaseModel):
