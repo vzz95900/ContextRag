@@ -14,12 +14,13 @@ SYSTEM_PROMPT = """\
 You are ContextAware, a helpful and precise AI-powered document research assistant.
 
 Follow these rules STRICTLY:
-1. If the user asks a conversational question (e.g. "Hi", "Who are you?", "How are you?"), introduce yourself politely as "ContextAware, an AI document assistant" and explain that you can help them find answers inside their uploaded documents. Do not attempt to search the empty context for this.
-2. If the user asks a factual question, answer it using ONLY the provided context blocks.
-3. If the context contains the answer, respond clearly and cite the sources using the format [Source: filename, page X].
-4. If the context is missing or does not contain the answer, politely say: "I don't see the answer to that in the provided documents." DO NOT make up an answer using your training data.
-5. NEVER fabricate information.
-6. Be concise but thorough.
+1. If the user asks a conversational question (e.g. "Hi", "Who are you?"), introduce yourself politely as "ContextAware" and explain how you can help. Do not attempt to search the context for this.
+2. If the user asks a factual question or a follow-up (e.g. "explain more", "in detail"), use the chat history to understand their intent and answer using ONLY the provided context blocks.
+3. Ignore minor spelling mistakes or typos in the user's question (e.g., "detai;" instead of "detail"). Infer their intended meaning using the conversational history.
+4. If the context contains the answer, respond clearly and cite the sources using the format [Source: filename, page X].
+5. If the context is missing or does not contain the answer, politely say: "I don't see the answer to that in the provided documents." DO NOT make up an answer.
+6. NEVER fabricate information.
+7. Be concise but thorough.
 """
 
 # Max characters per chunk to keep token usage low
@@ -215,7 +216,7 @@ def _generate_ollama(context: str, query: str, history: List[Dict[str, str]] | N
 def generate_answer(
     query: str,
     chunks: List[Dict[str, Any]],
-    history: List[Dict[str, str]] | None = None,
+    history: List[Dict[str, Any]] | None = None,
 ) -> str:
     """
     Generate a grounded answer from retrieved chunks.
@@ -231,15 +232,31 @@ def generate_answer(
     context = _format_context(chunks)
     provider = settings.llm_provider.lower()
 
+    clean_history = None
+    if history:
+        clean_history = []
+        for msg in history:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if not content and "parts" in msg and isinstance(msg["parts"], list):
+                content = msg["parts"][0]
+            
+            if provider == "gemini" and role == "assistant":
+                role = "model"
+            elif provider != "gemini" and role == "model":
+                role = "assistant"
+                
+            clean_history.append({"role": role, "content": content})
+
     if provider == "gemini":
-        return _generate_gemini(context, query, history)
+        return _generate_gemini(context, query, clean_history)
     elif provider == "openai":
-        return _generate_openai(context, query, history)
+        return _generate_openai(context, query, clean_history)
     elif provider == "huggingface":
-        return _generate_huggingface(context, query, history)
+        return _generate_huggingface(context, query, clean_history)
     elif provider == "groq":
-        return _generate_groq(context, query, history)
+        return _generate_groq(context, query, clean_history)
     elif provider == "ollama":
-        return _generate_ollama(context, query, history)
+        return _generate_ollama(context, query, clean_history)
     else:
         raise ValueError(f"Unknown LLM provider: {provider}")

@@ -49,6 +49,13 @@ class Settings(BaseSettings):
     enable_hybrid_search: bool = True
     enable_reranker: bool = True
 
+    # ── Optimizer (multi-objective retrieval) ───────────────
+    enable_optimizer: bool = True
+    optimizer_candidate_n: int = 30
+    optimizer_alpha: float = 0.5   # relevance weight
+    optimizer_beta: float = 0.3    # coverage / diversity weight
+    optimizer_gamma: float = 0.2   # support / agreement weight
+
     # ── API ─────────────────────────────────────────────────
     api_host: str = "0.0.0.0"
     api_port: int = 8000

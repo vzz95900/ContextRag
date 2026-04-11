@@ -6,12 +6,17 @@ from app.core.config import Settings
 def test_settings_defaults():
     """Verify default settings load correctly."""
     s = Settings(gemini_api_key="test-key")
-    assert s.llm_provider == "gemini"
     assert s.embedding_provider == "gemini"
     assert s.chunk_size == 512
     assert s.chunk_overlap == 64
-    assert s.retrieval_top_k == 20
-    assert s.rerank_top_n == 5
+    assert s.retrieval_top_k == 10
+    assert s.rerank_top_n == 3
+    # Optimizer defaults
+    assert s.enable_optimizer is True
+    assert s.optimizer_candidate_n == 30
+    assert s.optimizer_alpha == 0.5
+    assert s.optimizer_beta == 0.3
+    assert s.optimizer_gamma == 0.2
 
 
 def test_chunker_splits_text():

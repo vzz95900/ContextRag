@@ -1,12 +1,15 @@
-"""Retrieval pipeline — vector search + optional BM25 hybrid + reranker."""
+"""Retrieval pipeline — vector search + optional BM25 hybrid + optimizer."""
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 
 from app.core.config import settings
 from app.services.embedder import embed_query
 from app.services.vector_store import get_vector_store
+
+logger = logging.getLogger(__name__)
 
 
 def _bm25_search(query: str, corpus: List[Dict[str, Any]], top_k: int = 20) -> List[Dict[str, Any]]:
@@ -61,25 +64,51 @@ def retrieve(
 ) -> List[Dict[str, Any]]:
     """
     Full retrieval pipeline:
-    1. Dense vector search
+    1. Dense vector search (larger pool when optimizer is enabled)
     2. (Optional) BM25 hybrid fusion
-    3. Return ranked candidates
+    3. Multi-objective optimization OR plain top-k
     """
     top_k = top_k or settings.retrieval_top_k
     store = get_vector_store()
 
     # 1. Dense search
     query_emb = embed_query(query)
-    dense_results = store.search(query_emb, top_k=top_k, where=filters)
+
+    if settings.enable_optimizer:
+        # Retrieve a larger candidate pool for optimization
+        candidate_n = settings.optimizer_candidate_n
+        dense_results = store.search_with_embeddings(
+            query_emb, top_k=candidate_n, where=filters,
+        )
+    else:
+        dense_results = store.search(query_emb, top_k=top_k, where=filters)
 
     if not dense_results:
         return []
 
     # 2. (Optional) Hybrid with BM25
     if settings.enable_hybrid_search:
-        sparse_results = _bm25_search(query, dense_results, top_k=top_k)
+        sparse_results = _bm25_search(query, dense_results, top_k=len(dense_results))
         results = _merge_results(dense_results, sparse_results)
     else:
         results = dense_results
 
-    return results[:top_k]
+    # 3. Selection: optimization-based or plain top-k
+    if settings.enable_optimizer:
+        from app.services.optimizer import optimize_selection
+
+        selected = optimize_selection(
+            query_embedding=query_emb,
+            candidates=results,
+            k=top_k,
+            alpha=settings.optimizer_alpha,
+            beta=settings.optimizer_beta,
+            gamma=settings.optimizer_gamma,
+        )
+        logger.info(
+            "Retrieval: optimizer selected %d docs from %d candidates",
+            len(selected), len(results),
+        )
+        return selected
+    else:
+        return results[:top_k]

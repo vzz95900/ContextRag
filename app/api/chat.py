@@ -6,7 +6,7 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.core.config import settings
 from app.models.schemas import ChatRequest, ChatResponse, SourceCitation, ChatHistoryListResponse, ChatSessionResponse
@@ -27,15 +27,26 @@ def chat(req: ChatRequest):
     try:
         # 1. Retrieve candidates
         t0 = time.perf_counter()
+        
+        # Heuristic Context Expansion for Retrieval
+        # Short conversational intents (e.g. "Answer in detail") lack semantic keywords.
+        # We prepend the previous user question to inject topic grounding without extra LLM latency.
+        retrieval_query = req.query
+        if req.history and len(req.query.split()) < 20:
+            last_user_msgs = [m.get("content", "") for m in req.history if m.get("role") == "user"]
+            if last_user_msgs:
+                retrieval_query = f"{last_user_msgs[-1]} {req.query}"
+                logger.info(f"Expanded retrieval query: '{retrieval_query}'")
+                
         candidates = retrieve(
-            query=req.query,
+            query=retrieval_query,
             filters=req.filters,
         )
         logger.info("Retrieve: %.1fs (%d candidates)", time.perf_counter() - t0, len(candidates))
 
         # 2. Rerank
         t1 = time.perf_counter()
-        top_chunks = rerank(query=req.query, candidates=candidates)
+        top_chunks = rerank(query=retrieval_query, candidates=candidates)
         logger.info("Rerank: %.1fs (%d chunks)", time.perf_counter() - t1, len(top_chunks))
 
         # 3. Generate grounded answer
@@ -54,6 +65,10 @@ def chat(req: ChatRequest):
             )
             for c in top_chunks
         ]
+        
+        # If the LLM explicitly refused to answer due to lack of context, hide the citations
+        if "I don't see the answer" in answer or "I don't have enough information" in answer:
+            sources = []
 
         elapsed = (time.perf_counter() - start) * 1000
         session_id = req.session_id or str(uuid.uuid4())
@@ -74,9 +89,13 @@ def chat(req: ChatRequest):
             "model": model_name
         })
         
+        doc_scope_id = None
+        if req.filters and isinstance(req.filters, dict):
+            doc_scope_id = req.filters.get("doc_id")
+
         try:
             store = get_vector_store()
-            store.save_chat(session_id, title, updated_history)
+            store.save_chat(session_id, title, updated_history, doc_id=doc_scope_id)
         except Exception as e:
             logger.error(f"Failed to save chat history: {e}")
 
@@ -86,6 +105,7 @@ def chat(req: ChatRequest):
             session_id=session_id,
             model=model_name,
             latency_ms=round(elapsed, 1),
+            retrieval_mode="optimized" if settings.enable_optimizer else "top_k",
         )
 
     except Exception as e:
@@ -97,12 +117,16 @@ def chat(req: ChatRequest):
                     "Rate limit reached. Please wait 1-2 minutes and try again."
                 ),
             )
+        
+        logger.error(f"Chat error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/chats", response_model=ChatHistoryListResponse)
-def list_chats():
+def list_chats(doc_id: str | None = Query(default=None, description="Filter chat sessions by selected document scope")):
     """Return all past chat sessions."""
     try:
         store = get_vector_store()
-        sessions = store.list_chats()
+        sessions = store.list_chats(doc_id=doc_id)
         return ChatHistoryListResponse(sessions=sessions)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch chats: {e}")

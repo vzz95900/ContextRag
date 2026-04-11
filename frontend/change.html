@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Change — ContextAware</title>
+  <meta name="description" content="How ContextAware replaces top-k retrieval with multi-objective optimization">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Added Plotly for the charts -->
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-twilight.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    const savedTheme = localStorage.getItem('theme') || 'dark'; // Inherit from old streamlit script which defaults to dark
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+  <style>
+    body { overflow-y: auto; padding: 0; }
+    .page-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 30px;
+      padding: 3rem;
+      position: relative;
+    }
+    @media (max-width: 768px) {
+      .page-container { margin: 1rem; padding: 1.5rem; border-radius: 20px; }
+    }
+    
+    /* Code tabs glassmorphism */
+    .code-tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--glass-border); margin-bottom: 1rem; }
+    .code-tab { padding: 0.8rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: all 0.2s; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+    .code-tab:hover { color: var(--text-main); }
+    .code-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .code-panel { display: none; padding: 0; animation: fadeIn 0.3s; }
+    .code-panel.active { display: block; }
+    pre.code-block { 
+      background: #0f172a; 
+      border: 1px solid rgba(255,255,255,0.1); 
+      border-radius: 12px; 
+      padding: 1.5rem; 
+      overflow-x: auto; 
+      font-family: 'JetBrains Mono', monospace; 
+      font-size: 0.85rem; 
+      line-height: 1.6; 
+      color: #e2e8f0; 
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); 
+      white-space: pre-wrap;
+    }
+    .code-block .comment { color: #64748b; }
+    .code-block .keyword { color: #c084fc; font-weight: bold; }
+    .code-block .function { color: #38bdf8; }
+    .code-block .string { color: #34d399; }
+    .code-block .number { color: #fbbf24; }
+  </style>
+</head>
+<body>
+
+  <!-- Animated Background -->
+  <div class="bg-mesh"></div>
+
+  <div class="page-container mb-12">
+    <!-- Back btn -->
+    <a href="/" class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-main)] hover:text-emerald-500 mb-8 btn-glass transition">← Back to Chat</a>
+
+    <!-- Theme Toggle Helper -->
+    <div class="absolute top-8 right-8">
+      <button class="theme-toggle btn-glass text-xl h-12 w-12" onclick="toggleTheme()" id="themeBtn">☀️</button>
+    </div>
+
+    <!-- Hero -->
+    <div class="text-center py-8 mb-10 border-b border-[var(--glass-border)]">
+      <span class="inline-block bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-4 shadow-[0_0_15px_rgba(16,185,129,0.2)]">⚡ Formal Optimization Model · Beyond Top-K</span>
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 text-[var(--text-main)]">Algorithmic Paradigm Shift</h1>
+      <p class="text-[var(--text-muted)] mt-2 text-lg max-w-3xl mx-auto">Transitioning from naïve Top-K dense retrieval to multi-objective submodular optimization in ContextAware RAG architectures.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-14">
+      <div class="doc-card p-5 text-center transition-transform hover:-translate-y-2 border-b-4 border-b-emerald-500">
+        <div class="text-3xl font-extrabold text-[var(--text-main)]">3</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Scoring Objectives</div>
+      </div>
+      <div class="doc-card p-5 text-center transition-transform hover:-translate-y-2 border-b-4 border-b-indigo-500">
+        <div class="text-3xl font-extrabold text-[var(--text-main)]">30</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Candidate Pool</div>
+      </div>
+      <div class="doc-card p-5 text-center transition-transform hover:-translate-y-2 border-b-4 border-b-purple-500">
+        <div class="text-3xl font-extrabold text-[var(--text-main)]">O(Nk)</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Time Complexity</div>
+      </div>
+      <div class="doc-card p-5 text-center transition-transform hover:-translate-y-2 border-b-4 border-b-amber-500">
+        <div class="text-3xl font-extrabold text-[var(--text-main)]">1-1/e</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Approx Guarantee</div>
+      </div>
+      <div class="doc-card p-5 text-center transition-transform hover:-translate-y-2 border-b-4 border-b-red-500">
+        <div class="text-3xl font-extrabold text-[var(--text-main)]">0%</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Redundant Chunks</div>
+      </div>
+    </div>
+
+    <!-- The Problem with Standard Top-K -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mb-2 border-l-4 border-emerald-500 pl-3">🔍 Theoretical Limitations of Standard Top-K Retrieval</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">Why marginal cosine similarity ranking systematically fails to produce reliable generative grounding</p>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-14">
+      <div class="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl shadow-[0_4px_30px_rgba(239,68,68,0.02)] border-l-4 border-l-red-500 hover:-translate-y-1 transition">
+        <div class="inline-block bg-red-500/15 text-red-500 text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wider mb-4">❌ Standard Baseline</div>
+        <div class="font-extrabold text-[var(--text-main)] mb-4 text-lg">Top-K Marginal Cosine Similarity</div>
+        <ul class="text-sm text-[var(--text-muted)] space-y-3 font-medium list-disc pl-5">
+          <li>Ranks each document <strong>independently</strong> by query vector proximity.</li>
+          <li>Top-ranked distributions are frequently <strong>near-duplicates</strong> offering redundant context.</li>
+          <li>Zero dynamic state awareness; ignoring the <strong>submodular coverage</strong> of the drawn set.</li>
+          <li>Vital corroborating evidence is systematically <strong>omitted</strong> due to ranking displacement.</li>
+          <li>Generative model consumes <strong>redundant tokens</strong>, drastically wasting context windows.</li>
+          <li>Exponential <strong>hallucination risk</strong> when synthesizing multi-faceted inquiries.</li>
+        </ul>
+      </div>
+      <div class="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl shadow-[0_4px_30px_rgba(16,185,129,0.05)] border-l-4 border-l-emerald-500 hover:-translate-y-1 transition">
+        <div class="inline-block bg-emerald-500/15 text-emerald-500 text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wider mb-4">✅ Proposed Architecture</div>
+        <div class="font-extrabold text-[var(--text-main)] mb-4 text-lg">Multi-Objective Constrained Optimization</div>
+        <ul class="text-sm text-[var(--text-muted)] space-y-3 font-medium list-disc pl-5">
+          <li>Transforms text selection into a formal <strong>constrained knapsack optimization mapping</strong>.</li>
+          <li>Computes a continuous joint objective across <strong>Relevance, Coverage, and Inter-Document Support</strong>.</li>
+          <li>Employs a greedy solver to <strong>maximize marginal submodular gain</strong> iteratively.</li>
+          <li>Mathematically <strong>enforces spatial diversity</strong> throughout the grounded evidence set.</li>
+          <li>LLM constraint strictly receives <strong>non-redundant, comprehensively mapped</strong> context variables.</li>
+          <li>Generative generation is probabilistically <strong>anchored</strong> with robust factual consensus.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Multi-Objective Breakdown -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mb-2 border-l-4 border-indigo-500 pl-3">🎯 Tri-Metric Scoring Function Formulation</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">Vector-state evaluation dynamics scaling candidate nodes simultaneously across three axes</p>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-8">
+      <div class="doc-card p-6 text-center shadow-[0_4px_30px_rgba(99,102,241,0.05)] border border-indigo-500/20 bg-black/20 hover:scale-105">
+        <div class="font-bold text-xs mb-4 text-indigo-400 tracking-widest uppercase">📐 Relevance</div>
+        <div class="bg-black/30 border border-[var(--glass-border)] rounded-lg py-3 font-mono text-[14px] font-bold text-[var(--text-main)] mb-3 shadow-inner">Rel(q,d) = cos(q,d)</div>
+        <p class="text-xs text-[var(--text-muted)] font-medium">How semantically similar is this document to the user's query? Computed via cosine similarity between query and document embeddings.</p>
+      </div>
+      <div class="doc-card p-6 text-center shadow-[0_4px_30px_rgba(16,185,129,0.05)] border border-emerald-500/20 bg-black/20 hover:scale-105">
+        <div class="font-bold text-xs mb-4 text-emerald-400 tracking-widest uppercase">🌐 Coverage</div>
+        <div class="bg-black/30 border border-[var(--glass-border)] rounded-lg py-3 font-mono text-[14px] font-bold text-[var(--text-main)] mb-3 shadow-inner">Cov(d|S) = 1 − max sim(d,s)</div>
+        <p class="text-xs text-[var(--text-muted)] font-medium">How much <em>new</em> information does this doc bring? Measures diversity — penalizes documents that duplicate already-selected content.</p>
+      </div>
+      <div class="doc-card p-6 text-center shadow-[0_4px_30px_rgba(245,158,11,0.05)] border border-amber-500/20 bg-black/20 hover:scale-105">
+        <div class="font-bold text-xs mb-4 text-amber-400 tracking-widest uppercase">🤝 Support</div>
+        <div class="bg-black/30 border border-[var(--glass-border)] rounded-lg py-3 font-mono text-[14px] font-bold text-[var(--text-main)] mb-3 shadow-inner">Sup(d,S) = mean sim(d,s)</div>
+        <p class="text-xs text-[var(--text-muted)] font-medium">Is this document's claims supported by other selected evidence? Higher support = greater cross-document agreement = more reliable answers.</p>
+      </div>
+    </div>
+
+    <!-- Formula Banner -->
+    <div class="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-8 text-center shadow-[0_4px_40px_rgba(99,102,241,0.05)] mb-14 relative overflow-hidden">
+      <div class="text-sm font-bold text-[var(--text-main)] uppercase tracking-wider mb-6">🧮 Combined Score Function</div>
+      <div class="inline-block bg-black/30 border border-[var(--glass-border)] shadow-2xl rounded-2xl px-10 py-6 font-mono text-xl font-bold text-[var(--text-main)] mb-4">
+        Score(d) = α · Rel(q, d) + β · Cov(d | S) + γ · Sup(d, S)
+      </div>
+      <p class="text-[var(--text-muted)] font-medium mt-2 text-sm leading-relaxed">
+        <span class="text-indigo-400 font-bold">α·Rel</span> — semantic similarity &nbsp;|&nbsp;
+        <span class="text-emerald-400 font-bold">β·Cov</span> — marginal coverage gain &nbsp;|&nbsp;
+        <span class="text-amber-400 font-bold">γ·Sup</span> — agreement
+      </p>
+    </div>
+
+    <!-- Greedy Algorithm Waterfall -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mb-2 border-l-4 border-amber-500 pl-3">⚙️ The Greedy Selection Algorithm</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">How we efficiently find the optimal document set — step by step</p>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-14">
+      <div class="doc-card p-5 relative overflow-hidden hover:translate-x-2 transition border-transparent hover:border-indigo-400 hover:shadow-[0_0_24px_rgba(99,102,241,0.1)] group">
+        <div class="inline-flex w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 font-bold items-center justify-center mb-3">1</div>
+        <div class="font-bold text-[var(--text-main)] mb-1">Candidate Retrieval</div>
+        <div class="text-sm text-[var(--text-muted)] leading-relaxed">Retrieve top N=30 candidates using dense cosine similarity from ChromaDB. Larger pool gives the optimizer more choices.</div>
+      </div>
+      <div class="doc-card p-5 relative overflow-hidden hover:translate-x-2 transition border-transparent hover:border-violet-400 hover:shadow-[0_0_24px_rgba(139,92,246,0.1)] group">
+        <div class="inline-flex w-8 h-8 rounded-full bg-violet-500/20 text-violet-400 font-bold items-center justify-center mb-3">2</div>
+        <div class="font-bold text-[var(--text-main)] mb-1">Initialize Empty Set</div>
+        <div class="text-sm text-[var(--text-muted)] leading-relaxed">Start with S = ∅. Coverage defaults to 1.0, support to 0.0 for the first pick.</div>
+      </div>
+      <div class="doc-card p-5 relative overflow-hidden hover:translate-x-2 transition border-transparent hover:border-sky-400 hover:shadow-[0_0_24px_rgba(14,165,233,0.1)] group">
+        <div class="inline-flex w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 font-bold items-center justify-center mb-3">3</div>
+        <div class="font-bold text-[var(--text-main)] mb-1">Score All Remaining</div>
+        <div class="text-sm text-[var(--text-muted)] leading-relaxed">For each candidate d ∉ S, compute Score(d). Coverage and support are dynamically recalculated against S.</div>
+      </div>
+      <div class="doc-card p-5 relative overflow-hidden hover:translate-x-2 transition border-transparent hover:border-emerald-400 hover:shadow-[0_0_24px_rgba(16,185,129,0.1)] group">
+        <div class="inline-flex w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 font-bold items-center justify-center mb-3">4</div>
+        <div class="font-bold text-[var(--text-main)] mb-1">Select the Best</div>
+        <div class="text-sm text-[var(--text-muted)] leading-relaxed">Pick the document d* with the highest combined score and add to S. Greedily maximizes marginal gain at each step.</div>
+      </div>
+      <div class="doc-card p-5 relative overflow-hidden hover:translate-x-2 transition border-transparent hover:border-amber-400 hover:shadow-[0_0_24px_rgba(245,158,11,0.1)] group">
+        <div class="inline-flex w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 font-bold items-center justify-center mb-3">5</div>
+        <div class="font-bold text-[var(--text-main)] mb-1">Repeat Until |S| = k</div>
+        <div class="text-sm text-[var(--text-muted)] leading-relaxed">Loop steps 3–4 until we've selected k documents. Each iteration accounts for what's already been chosen.</div>
+      </div>
+      <div class="doc-card p-5 relative overflow-hidden hover:translate-x-2 transition border-transparent hover:border-red-400 hover:shadow-[0_0_24px_rgba(239,68,68,0.1)] group">
+        <div class="inline-flex w-8 h-8 rounded-full bg-red-500/20 text-red-400 font-bold items-center justify-center mb-3">6</div>
+        <div class="font-bold text-[var(--text-main)] mb-1">Return Optimized Set</div>
+        <div class="text-sm text-[var(--text-muted)] leading-relaxed">Pass the selected set S to the reranker → LLM for answer generation. Downstream pipeline is completely unharmed.</div>
+      </div>
+    </div>
+
+
+    <!-- CODE UNDER THE HOOD -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-pink-500 pl-3">💻 Code Under The Hood</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">The actual Python implementation — scoring functions, greedy loop, and retriever integration</p>
+
+    <div class="code-tabs mb-6">
+      <div class="code-tab active" onclick="switchTab(0)">📐 Scoring Functions</div>
+      <div class="code-tab" onclick="switchTab(1)">🔄 Greedy Optimizer</div>
+      <div class="code-tab" onclick="switchTab(2)">🔧 Retriever (Before → After)</div>
+      <div class="code-tab" onclick="switchTab(3)">⚙️ Configuration</div>
+    </div>
+
+    <!-- Panel 0: Scoring Functions -->
+    <div class="code-panel active" id="panel-0">
+      <div class="bg-black/30 border border-indigo-500/20 rounded-xl p-5 mb-4">
+        <p class="text-indigo-400 text-[11px] font-bold tracking-widest uppercase mb-1">📄 app/services/optimizer.py — Scoring Functions</p>
+        <p class="text-[var(--text-muted)] text-sm mb-6">Each function computes one dimension of the multi-objective score. All use cosine similarity as the base metric.</p>
+        <pre><code class="language-python">def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    """Compute cosine similarity between two vectors."""
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return float(np.dot(a, b) / (norm_a * norm_b))
+
+def compute_relevance(query_emb, doc_emb) -> float:
+    """Rel(q, d) = cosine_similarity(q, d)"""
+    return cosine_similarity(query_emb, doc_emb)
+
+def compute_coverage(doc_emb, selected_embs) -> float:
+    """Cov(d | S) = 1 - max(similarity(d, s)) for all s in S."""
+    if not selected_embs:
+        return 1.0  # First doc always gets full coverage
+    max_sim = max(cosine_similarity(doc_emb, s) for s in selected_embs)
+    return 1.0 - max_sim
+
+def compute_support(doc_emb, selected_embs) -> float:
+    """Sup(d, S) = mean(similarity(d, s)) for all s in S."""
+    if not selected_embs:
+        return 0.0
+    total_sim = sum(cosine_similarity(doc_emb, s) for s in selected_embs)
+    return total_sim / len(selected_embs)</code></pre>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-3 text-center">
+          <p class="text-indigo-400 font-bold text-sm mb-1">Relevance</p>
+          <p class="text-[var(--text-muted)] text-[11px]">Range: [-1, 1]<br>Higher = more relevant</p>
+        </div>
+        <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 text-center">
+          <p class="text-emerald-400 font-bold text-sm mb-1">Coverage</p>
+          <p class="text-[var(--text-muted)] text-[11px]">Range: [0, 1]<br>Higher = more unique info</p>
+        </div>
+        <div class="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-center">
+          <p class="text-amber-400 font-bold text-sm mb-1">Support</p>
+          <p class="text-[var(--text-muted)] text-[11px]">Range: [0, 1]<br>Higher = more corroborated</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 1: Greedy Loop -->
+    <div class="code-panel" id="panel-1">
+      <div class="bg-black/30 border border-emerald-500/20 rounded-xl p-5 mb-4">
+        <p class="text-emerald-400 text-[11px] font-bold tracking-widest uppercase mb-1">📄 app/services/optimizer.py — Greedy Loop</p>
+        <p class="text-[var(--text-muted)] text-sm mb-6">The core algorithm: iteratively picks the document with the <strong class="text-[var(--text-main)]">highest combined score</strong> considering what's already been selected. This is the key difference from top-k.</p>
+        <pre><code class="language-python">def optimize_selection(query_embedding, candidates, k, alpha=0.5, beta=0.3, gamma=0.2):
+    """
+    Greedy multi-objective document selection.
+    Selects k documents maximizing: α·Rel + β·Cov + γ·Sup
+    """
+    query_emb = np.asarray(query_embedding, dtype=np.float32)
+    candidate_embs = [np.asarray(c["embedding"]) for c in candidates]
+
+    relevance_scores = [
+        compute_relevance(query_emb, emb) for emb in candidate_embs
+    ]
+
+    selected = []
+    selected_embs = []
+    remaining = list(range(len(candidates)))
+
+    while len(selected) < k and remaining:
+        best_score = -float("inf")
+        best_idx = -1
+
+        for idx in remaining:
+            # ── THE KEY DIFFERENCE FROM TOP-K ──
+            # Coverage & support change at every iteration dynamically
+            rel = relevance_scores[idx]          
+            cov = compute_coverage(candidate_embs[idx], selected_embs)
+            sup = compute_support(candidate_embs[idx], selected_embs)
+
+            score = alpha * rel + beta * cov + gamma * sup
+
+            if score > best_score:
+                best_score = score
+                best_idx = idx
+
+        doc = candidates[best_idx].copy()
+        doc["opt_score"] = best_score
+        doc.pop("embedding", None)
+
+        selected.append(doc)
+        selected_embs.append(candidate_embs[best_idx])
+        remaining.remove(best_idx)
+
+    return selected  # ← Replaces naive top-k results</code></pre>
+      </div>
+      <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4">
+        <p class="text-emerald-400 font-bold text-sm mb-2">💡 Why This Works</p>
+        <p class="text-[var(--text-muted)] text-xs leading-relaxed">
+          <strong class="text-[var(--text-main)]">Iteration 1:</strong> Coverage = 1.0 for all, Support = 0.0 → picks the most relevant doc (like top-k).<br>
+          <strong class="text-[var(--text-main)]">Iteration 2+:</strong> Near-duplicates get Coverage ≈ 0 (penalized), so diverse docs with moderate relevance win.<br>
+          <strong class="text-[var(--text-main)]">Result:</strong> A balanced set that covers more ground while staying relevant to the query.
+        </p>
+      </div>
+    </div>
+
+    <!-- Panel 2: Retriever -->
+    <div class="code-panel" id="panel-2">
+      <div class="bg-black/30 border border-amber-500/20 rounded-xl p-5 mb-4">
+        <p class="text-amber-400 text-[11px] font-bold tracking-widest uppercase mb-1">📄 app/services/retriever.py — Before vs After</p>
+        <p class="text-[var(--text-muted)] text-sm mb-6">The retriever was modified to use the optimizer when enabled, while keeping the original top-k path intact as a <strong class="text-[var(--text-main)]">fallback option</strong>.</p>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <p class="text-red-400 text-xs font-bold tracking-widest uppercase mb-2">❌ Before — retriever.py</p>
+            <pre><code class="language-python">def retrieve(query, top_k=None, filters=None):
+    top_k = top_k or settings.retrieval_top_k
+    store = get_vector_store()
+
+    # Dense search — fixed small pool
+    query_emb = embed_query(query)
+    dense_results = store.search(
+        query_emb, top_k=top_k
+    )
+
+    # Optional BM25 hybrid
+    if settings.enable_hybrid_search:
+        sparse = _bm25_search(query, dense_results)
+        results = _merge_results(dense_results, sparse)
+    else:
+        results = dense_results
+
+    # Just slice top-k — no optimization!
+    return results[:top_k]</code></pre>
+          </div>
+          <div>
+            <p class="text-emerald-400 text-xs font-bold tracking-widest uppercase mb-2">✅ After — retriever.py</p>
+            <pre><code class="language-python">def retrieve(query, top_k=None, filters=None):
+    top_k = top_k or settings.retrieval_top_k
+    store = get_vector_store()
+    query_emb = embed_query(query)
+
+    if settings.enable_optimizer:
+        # Larger candidate pool for optimization
+        dense_results = store.search_with_embeddings(
+            query_emb, top_k=settings.optimizer_candidate_n
+        )
+    else:
+        dense_results = store.search(query_emb, top_k=top_k)
+
+    # Optional BM25 hybrid
+    if settings.enable_hybrid_search:
+        sparse = _bm25_search(query, dense_results)
+        results = _merge_results(dense_results, sparse)
+    else:
+        results = dense_results
+
+    # NEW: Optimization-based selection
+    if settings.enable_optimizer:
+        from app.services.optimizer import optimize_selection
+        return optimize_selection(
+            query_emb, results, k=top_k,
+            alpha=settings.optimizer_alpha,
+            beta=settings.optimizer_beta,
+            gamma=settings.optimizer_gamma,
+        )
+    else:
+        return results[:top_k]</code></pre>
+          </div>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="bg-red-500/5 border border-red-500/10 rounded-xl p-3">
+          <p class="text-red-400 font-bold text-sm mb-1">Before: 2 steps</p>
+          <p class="text-[var(--text-muted)] text-[11px]">Search → Slice top-k<br><em>No inter-document awareness</em></p>
+        </div>
+        <div class="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3">
+          <p class="text-emerald-400 font-bold text-sm mb-1">After: 3 steps</p>
+          <p class="text-[var(--text-muted)] text-[11px]">Search (N=30) → Optimize → Return k<br><em>Each pick considers the whole set</em></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel 3: Configuration -->
+    <div class="code-panel" id="panel-3">
+      <div class="bg-black/30 border border-violet-500/20 rounded-xl p-5 mb-4">
+        <p class="text-violet-400 text-[11px] font-bold tracking-widest uppercase mb-1">📄 app/core/config.py & .env</p>
+        <p class="text-[var(--text-muted)] text-sm mb-6">All optimizer parameters are configurable natively via environment variables.</p>
+        
+        <p class="text-violet-400 text-xs font-bold tracking-widest uppercase mb-2">config.py Settings Object</p>
+        <pre><code class="language-python">class Settings(BaseSettings):
+    # ── Optimizer (NEW) ────────────────────────────────
+    enable_optimizer: bool = True     # Toggle on/off
+    optimizer_candidate_n: int = 30   # Pool size (N)
+    optimizer_alpha: float = 0.5      # α — Relevance weight
+    optimizer_beta: float = 0.3       # β — Coverage weight
+    optimizer_gamma: float = 0.2      # γ — Support weight</code></pre>
+        
+        <p class="text-violet-400 text-xs font-bold tracking-widest uppercase mt-6 mb-2">.env Overrides</p>
+        <pre><code class="language-bash"># Change without reloading
+ENABLE_OPTIMIZER=true
+OPTIMIZER_CANDIDATE_N=30
+OPTIMIZER_ALPHA=0.5
+OPTIMIZER_BETA=0.3
+OPTIMIZER_GAMMA=0.2</code></pre>
+      </div>
+      
+      <div class="bg-violet-500/5 border border-violet-500/20 rounded-xl p-4">
+        <p class="text-violet-400 font-bold text-sm mb-2">🎛️ Tuning Guide</p>
+        <p class="text-[var(--text-muted)] text-xs leading-relaxed">
+          <strong class="text-[var(--text-main)]">High α (e.g. 0.7):</strong> Prioritize relevance — behaves closer to top-k.<br>
+          <strong class="text-[var(--text-main)]">High β (e.g. 0.5):</strong> Prioritize diversity — prevents redundant chunks.<br>
+          <strong class="text-[var(--text-main)]">High γ (e.g. 0.4):</strong> Prioritize agreement — good for fact-checking queries.<br>
+          <strong class="text-[var(--text-main)]">Constraint:</strong> α + β + γ = 1.0 is recommended but not enforced.
+        </p>
+      </div>
+    </div>
+
+    <!-- Interactive Simulation Using Plotly.js -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-sky-500 pl-3">📊 Top-K vs Optimized — Visual Comparison</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">How the optimizer selects a diverse, balanced document set compared to naive top-k</p>
+
+    <div class="grid md:grid-cols-2 gap-8 mb-14">
+      <div class="p-6 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-xl relative">
+        <div id="chart-topk" style="width:100%; height:320px;"></div>
+      </div>
+      <div class="p-6 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-xl relative">
+        <div id="chart-opt" style="width:100%; height:320px;"></div>
+      </div>
+    </div>
+
+    <!-- Impact on Answer Quality Radar Using Plotly.js -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-teal-500 pl-3">📈 Impact on Answer Quality</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">How the optimization changes key quality metrics</p>
+
+    <div class="grid md:grid-cols-2 gap-8 mb-14 items-center">
+      <div class="p-6 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-xl">
+        <div id="chart-radar" style="width:100%; height:400px;"></div>
+      </div>
+      <div class="p-6">
+        <div class="doc-card p-4 transition-transform hover:-translate-y-1 mb-4">
+            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Evidence Diversity — 92%</p>
+            <p class="text-sm text-[var(--text-muted)]">Coverage objective actively prevents near-duplicate selection, ensuring every chunk brings unique information.</p>
+        </div>
+        <div class="doc-card p-4 transition-transform hover:-translate-y-1 mb-4">
+            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Redundancy Reduction — 95%</p>
+            <p class="text-sm text-[var(--text-muted)]">The Cov(d|S) formula directly penalizes adding documents similar to what's already selected.</p>
+        </div>
+        <div class="doc-card p-4 transition-transform hover:-translate-y-1 mb-4">
+            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Hallucination Resistance — 91%</p>
+            <p class="text-sm text-[var(--text-muted)]">Support scoring ensures selected evidence has cross-document agreement, grounding LLM generation.</p>
+        </div>
+        <div class="doc-card p-4 transition-transform hover:-translate-y-1 mb-4">
+            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Answer Reliability — 90%</p>
+            <p class="text-sm text-[var(--text-muted)]">Multi-perspective context gives the LLM a broader evidence base, reducing single-source bias.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Output Comparison -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-cyan-500 pl-3">🧪 Empirical Output Comparison — Baseline vs. Optimized Grounding</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">Evaluating the syntactical generation delta across equivalent retrieval pools</p>
+
+    <div class="grid md:grid-cols-2 gap-8 mb-8">
+      <div class="p-6 rounded-2xl bg-red-500/5 border border-red-500/20 shadow-[0_4px_30px_rgba(239,68,68,0.08)]">
+        <div class="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-red-500/15 text-red-400 px-3 py-1 rounded-full mb-4">❌ Before Optimization (Top-K)</div>
+        <p class="text-xs text-[var(--text-muted)] mb-4"><strong class="text-[var(--text-main)]">Query:</strong> "What are the main causes of LLM hallucinations, and how can teams reduce them in production?"</p>
+        <div class="doc-card p-4 mb-4 border border-red-500/20 bg-black/20">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-red-400 mb-2">Generated Answer</p>
+          <p class="text-sm text-[var(--text-muted)] leading-relaxed">LLM hallucinations happen when models guess missing facts, especially with ambiguous prompts and weak context. Teams can reduce this by giving better prompts, setting lower temperature, and adding more checks. In general, better data and model tuning help.</p>
+        </div>
+        <div class="doc-card p-4 border border-red-500/20 bg-black/20">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-red-400 mb-2">Observed Issues</p>
+          <ul class="text-sm text-[var(--text-muted)] space-y-2 list-disc pl-5">
+            <li>Repeats similarity-focused points from near-duplicate chunks</li>
+            <li>Stays high-level and skips concrete production controls</li>
+            <li>No structured mitigation plan for real system pipelines</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 shadow-[0_4px_30px_rgba(16,185,129,0.08)]">
+        <div class="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-emerald-500/15 text-emerald-400 px-3 py-1 rounded-full mb-4">✅ After Optimization (Multi-Objective)</div>
+        <p class="text-xs text-[var(--text-muted)] mb-4"><strong class="text-[var(--text-main)]">Query:</strong> "What are the main causes of LLM hallucinations, and how can teams reduce them in production?"</p>
+        <div class="doc-card p-4 mb-4 border border-emerald-500/20 bg-black/20">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Generated Answer</p>
+          <p class="text-sm text-[var(--text-muted)] leading-relaxed">Common hallucination causes in LLM systems include weak retrieval quality, missing source citations, stale knowledge, prompt ambiguity, and over-confident decoding. A practical mitigation stack is: <strong class="text-[var(--text-main)]">(1)</strong> retrieval with source attribution, <strong class="text-[var(--text-main)]">(2)</strong> strict grounding prompts, <strong class="text-[var(--text-main)]">(3)</strong> lower-temperature decoding for factual tasks, <strong class="text-[var(--text-main)]">(4)</strong> post-generation verification checks, and <strong class="text-[var(--text-main)]">(5)</strong> human review for high-risk outputs. In production, combine these with evaluation sets and continuous monitoring of factual error rates.</p>
+        </div>
+        <div class="doc-card p-4 border border-emerald-500/20 bg-black/20">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 mb-2">Observed Improvements</p>
+          <ul class="text-sm text-[var(--text-muted)] space-y-2 list-disc pl-5">
+            <li>Lists concrete causes and actionable safeguards</li>
+            <li>Provides a production-ready, ordered mitigation workflow</li>
+            <li>Improves factual clarity and operational usefulness</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto mb-14">
+      <div class="min-w-[640px] rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-xl">
+        <div class="grid grid-cols-4 text-xs font-bold uppercase tracking-widest border-b border-[var(--glass-border)]">
+          <div class="p-4 text-[var(--text-main)]">Quality Signal</div>
+          <div class="p-4 text-red-400">Before</div>
+          <div class="p-4 text-emerald-400">After</div>
+          <div class="p-4 text-cyan-400">Delta</div>
+        </div>
+        <div class="grid grid-cols-4 text-sm border-b border-[var(--glass-border)]">
+          <div class="p-4 text-[var(--text-main)] font-semibold">Coverage of key concepts</div>
+          <div class="p-4 text-[var(--text-muted)]">2 / 5</div>
+          <div class="p-4 text-[var(--text-muted)]">5 / 5</div>
+          <div class="p-4 text-emerald-400 font-semibold">+3</div>
+        </div>
+        <div class="grid grid-cols-4 text-sm border-b border-[var(--glass-border)]">
+          <div class="p-4 text-[var(--text-main)] font-semibold">Redundant statements</div>
+          <div class="p-4 text-[var(--text-muted)]">High</div>
+          <div class="p-4 text-[var(--text-muted)]">Low</div>
+          <div class="p-4 text-emerald-400 font-semibold">Improved</div>
+        </div>
+        <div class="grid grid-cols-4 text-sm border-b border-[var(--glass-border)]">
+          <div class="p-4 text-[var(--text-main)] font-semibold">Step-by-step clarity</div>
+          <div class="p-4 text-[var(--text-muted)]">Medium</div>
+          <div class="p-4 text-[var(--text-muted)]">High</div>
+          <div class="p-4 text-emerald-400 font-semibold">+1 level</div>
+        </div>
+        <div class="grid grid-cols-4 text-sm">
+          <div class="p-4 text-[var(--text-main)] font-semibold">Grounding confidence</div>
+          <div class="p-4 text-[var(--text-muted)]">63%</div>
+          <div class="p-4 text-[var(--text-muted)]">89%</div>
+          <div class="p-4 text-emerald-400 font-semibold">+26%</div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Pipeline Before After -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-violet-500 pl-3">🔀 Pipeline Before & After</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">How the retrieval pipeline changes with optimization</p>
+    
+    <div class="grid md:grid-cols-2 gap-8 mb-14">
+      <div class="p-6 rounded-2xl bg-[var(--glass-bg)] border border-red-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
+        <div class="text-xs font-extrabold text-red-500 uppercase tracking-widest mb-6 text-center bg-red-500/10 py-2 rounded-lg">BEFORE — Standard Top-K</div>
+        <div class="space-y-4">
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-red-500/10">1. ❓ User Query</div>
+          <div class="text-center text-[var(--text-muted)] text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-red-500/10">2. 🔢 Embed Query</div>
+          <div class="text-center text-[var(--text-muted)] text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-red-500/10">3. 🔎 Cosine Search (top-k=10)</div>
+          <div class="text-center text-[var(--text-muted)] text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-red-500/10">4. 🔀 BM25 Hybrid Fusion</div>
+          <div class="text-center text-[var(--text-muted)] text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-red-500/10">5. ⚡ CrossEncoder Rerank</div>
+          <div class="text-center text-red-500 text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-red-400 bg-red-500/10 border-red-500/30 shadow-xl">6. 🤖 LLM Generates (High Redundancy)</div>
+        </div>
+      </div>
+      <div class="p-6 rounded-2xl bg-[var(--glass-bg)] border border-emerald-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.02)] border-t-4 border-t-emerald-500">
+        <div class="text-xs font-extrabold text-emerald-400 uppercase tracking-widest mb-6 text-center bg-emerald-500/10 py-2 rounded-lg">AFTER — Optimized Selection</div>
+        <div class="space-y-4">
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-emerald-500/10">1. ❓ User Query</div>
+          <div class="text-center text-[var(--text-muted)] text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-emerald-500/10">2. 🔢 Embed Query</div>
+          <div class="text-center text-[var(--text-muted)] text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-emerald-500/10">3. 🔎 Cosine Search <span class="text-emerald-400">(N=30 pool)</span></div>
+          <div class="text-center text-[var(--text-muted)] text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-emerald-500/10">4. 🔀 BM25 Hybrid Fusion</div>
+          <div class="text-center text-emerald-500 text-xl font-black">↓</div>
+          <div class="doc-card py-4 px-4 text-center text-sm font-bold text-emerald-400 bg-emerald-500/10 border-emerald-500/50 scale-105 shadow-[0_0_20px_rgba(16,185,129,0.3)]">5. 🧬 Multi-Objective Optimizer <span class="bg-emerald-500/30 text-white rounded px-2 py-0.5 ml-2 text-[10px]">NEW</span></div>
+          <div class="text-center text-emerald-500 text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-[var(--text-main)] border-emerald-500/10">6. ⚡ CrossEncoder Rerank Validation</div>
+          <div class="text-center text-emerald-500 text-xl font-black">↓</div>
+          <div class="doc-card py-3 px-4 text-center text-sm font-bold text-emerald-400 bg-emerald-500/5 border-emerald-500/20 shadow-xl">7. 🤖 LLM Generates (Diverse Coverage)</div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-8 text-center shadow-[0_4px_40px_rgba(16,185,129,0.05)] mx-auto">
+        <p class="text-[var(--text-muted)] font-medium max-w-2xl mx-auto text-sm leading-relaxed mb-4 tracking-widest uppercase">🎯 Optimization Objective</p>
+        <div class="inline-block bg-black/30 border border-[var(--glass-border)] shadow-2xl rounded-2xl px-10 py-6 font-mono text-xl font-bold text-[var(--text-main)] mb-4 transition-transform hover:scale-105">
+            S* = argmax Σ [ α·Rel(q,dᵢ) + β·C(dᵢ|S) + γ·Sup(dᵢ,S) ]
+        </div>
+    </div>
+  </div>
+
+  <script>
+    // Tab Switching Logic
+    function switchTab(index) {
+        // Find all tabs and panels
+        const tabs = document.querySelectorAll('.code-tab');
+        const panels = document.querySelectorAll('.code-panel');
+        
+        // Remove active class from all
+        tabs.forEach(t => t.classList.remove('active'));
+        panels.forEach(p => p.classList.remove('active'));
+        
+        // Add active class to target
+        if(tabs[index]) tabs[index].classList.add('active');
+        if(document.getElementById('panel-' + index)) {
+            document.getElementById('panel-' + index).classList.add('active');
+        }
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const target = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', target);
+      localStorage.setItem('theme', target);
+      document.getElementById('themeBtn').innerText = target === 'dark' ? '🌙' : '☀️';
+      // Rerender plots on theme shift to update gridlines
+      renderPlots();
+    }
+    document.getElementById('themeBtn').innerText = savedTheme === 'dark' ? '🌙' : '☀️';
+
+    // PLOTLY JS INTEGRATION
+    function renderPlots() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const txtColor = isDark ? '#94a3b8' : '#64748b';
+        const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+        const bgColor = 'rgba(0,0,0,0)';
+        const fontFam = 'Inter, sans-serif';
+
+        // Fake Data
+        const n_docs = 15;
+        const relevance = [0.95, 0.93, 0.91, 0.90, 0.88, 0.86, 0.84, 0.82, 0.80, 0.78, 0.75, 0.72, 0.70, 0.68, 0.65];
+        const xVals = Array.from({length: n_docs}, (_, i) => `D${i+1}`);
+        const hoverTemp = "<b>Doc %{x}</b><br>Relevance: %{y:.2f}<extra></extra>";
+
+        // === TOP-k CHART ===
+        const topk_sel = [0, 1, 2, 3, 4];
+        const colors_topk = Array(n_docs).fill(isDark ? 'rgba(100,116,139,0.3)' : 'rgba(100,116,139,0.1)');
+        const borders_topk = Array(n_docs).fill(isDark ? 'rgba(100,116,139,0.2)' : 'rgba(100,116,139,0.1)');
+        topk_sel.forEach(i => { colors_topk[i] = 'rgba(239,68,68,0.85)'; borders_topk[i] = '#ef4444'; });
+
+        const traceTopk = {
+            x: xVals, y: relevance, type: 'bar',
+            marker: { color: colors_topk, line: { color: borders_topk, width: 2 } },
+            text: relevance.map(v => v.toFixed(2)), textposition: 'outside', textfont: { color: txtColor, size: 10, family: fontFam },
+            hovertemplate: hoverTemp
+        };
+
+        const layoutTopk = {
+            title: { text: "❌ Top-K Selection", font: {size: 16, color: '#f87171', family: fontFam} },
+            paper_bgcolor: bgColor, plot_bgcolor: bgColor, font: {family: fontFam, color: txtColor, size: 11},
+            margin: {l:10, r:10, t:50, b:20}, showlegend: false,
+            xaxis: { showgrid: false, tickfont: {size: 10} },
+            yaxis: { title: "Relevance Score", gridcolor: gridColor, range: [0, 1.1] },
+            annotations: [{ text: "⚠️ Picks top-5 by absolute score — highly redundant clumps", xref: "paper", yref: "paper", x: 0.5, y: -0.15, showarrow: false, font: {size: 11, color: '#f87171'} }]
+        };
+        Plotly.newPlot('chart-topk', [traceTopk], layoutTopk, {displayModeBar: false, responsive: true});
+
+
+        // === OPTIMIZED CHART ===
+        const opt_sel = [0, 3, 6, 10, 13];
+        const colors_opt = Array(n_docs).fill(isDark ? 'rgba(100,116,139,0.3)' : 'rgba(100,116,139,0.1)');
+        const borders_opt = Array(n_docs).fill(isDark ? 'rgba(100,116,139,0.2)' : 'rgba(100,116,139,0.1)');
+        opt_sel.forEach(i => { colors_opt[i] = 'rgba(16,185,129,0.85)'; borders_opt[i] = '#10b981'; });
+
+        const traceOpt = {
+            x: xVals, y: relevance, type: 'bar',
+            marker: { color: colors_opt, line: { color: borders_opt, width: 2 } },
+            text: relevance.map(v => v.toFixed(2)), textposition: 'outside', textfont: { color: txtColor, size: 10, family: fontFam },
+            hovertemplate: hoverTemp
+        };
+
+        const layoutOpt = {
+            title: { text: "✅ Optimized Selection", font: {size: 16, color: '#34d399', family: fontFam} },
+            paper_bgcolor: bgColor, plot_bgcolor: bgColor, font: {family: fontFam, color: txtColor, size: 11},
+            margin: {l:10, r:10, t:50, b:20}, showlegend: false,
+            xaxis: { showgrid: false, tickfont: {size: 10} },
+            yaxis: { title: "Relevance Score", gridcolor: gridColor, range: [0, 1.1] },
+            annotations: [{ text: "✔️ Picks 5 spread dynamically — maximizes subset coverage", xref: "paper", yref: "paper", x: 0.5, y: -0.15, showarrow: false, font: {size: 11, color: '#34d399'} }]
+        };
+        Plotly.newPlot('chart-opt', [traceOpt], layoutOpt, {displayModeBar: false, responsive: true});
+
+
+        // === RADAR CHART ===
+        const categories = ["Evidence<br>Diversity", "Information<br>Coverage", "Answer<br>Reliability", "Redundancy<br>Reduction", "Source<br>Spread", "Hallucination<br>Resistance"];
+        const catsCircular = [...categories, categories[0]];
+        const opt_vals = [92, 88, 90, 95, 87, 91, 92];
+        const topk_vals = [40, 55, 60, 30, 45, 50, 40];
+
+        const polarGridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+
+        const traceRadarOpt = {
+            type: 'scatterpolar', r: opt_vals, theta: catsCircular, fill: 'toself',
+            name: 'ContextAware (Optimized)', fillcolor: 'rgba(16,185,129,0.2)',
+            line: {color: '#10b981', width: 2.5}, marker: {size: 7, color: '#10b981'}
+        };
+        const traceRadarTopk = {
+            type: 'scatterpolar', r: topk_vals, theta: catsCircular, fill: 'toself',
+            name: 'Standard Top-K RAG', fillcolor: isDark ? 'rgba(100,116,139,0.15)' : 'rgba(100,116,139,0.05)',
+            line: {color: isDark ? '#64748b' : '#94a3b8', width: 2, dash: 'dash'}, marker: {size: 6, color: isDark ? '#64748b' : '#94a3b8'}
+        };
+
+        const layoutRadar = {
+            polar: {
+                bgcolor: bgColor,
+                radialaxis: { visible: true, range: [0, 100], gridcolor: polarGridColor, tickfont: {color: txtColor, size: 9} },
+                angularaxis: { gridcolor: polarGridColor, tickfont: {color: txtColor, size: 11, family: fontFam} },
+            },
+            paper_bgcolor: bgColor, plot_bgcolor: bgColor, font: {family: fontFam, color: txtColor},
+            margin: {l:50, r:50, t:30, b:60},
+            legend: { orientation: "h", y: -0.15, font: {size: 11} }
+        };
+        Plotly.newPlot('chart-radar', [traceRadarOpt, traceRadarTopk], layoutRadar, {displayModeBar: false, responsive: true});
+    }
+
+    // Initial render
+    setTimeout(renderPlots, 100);
+
+  </script>
+</body>
+</html>

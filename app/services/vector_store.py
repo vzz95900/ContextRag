@@ -17,7 +17,11 @@ class ChromaStore:
 
     def __init__(self, persist_dir: str | None = None, collection_name: str = "rag_docs"):
         import chromadb
+        import logging
         import shutil
+        from datetime import datetime
+
+        logger = logging.getLogger(__name__)
 
         persist_dir = persist_dir or settings.chroma_persist_dir
         Path(persist_dir).mkdir(parents=True, exist_ok=True)
@@ -32,12 +36,33 @@ class ChromaStore:
                 name="chat_histories",
             )
         except (ValueError, AttributeError) as e:
-            # Corrupted or incompatible DB — wipe and recreate
-            import logging
-            logging.getLogger(__name__).warning(
-                "ChromaDB init failed (%s). Resetting database...", e
-            )
-            shutil.rmtree(persist_dir, ignore_errors=True)
+            # Retry once before any destructive recovery.
+            logger.warning("ChromaDB init failed (%s). Retrying once...", e)
+            try:
+                self._client = chromadb.PersistentClient(path=persist_dir)
+                self._collection = self._client.get_or_create_collection(
+                    name=collection_name,
+                    metadata={"hnsw:space": "cosine"},
+                )
+                self._chat_collection = self._client.get_or_create_collection(
+                    name="chat_histories",
+                )
+                return
+            except (ValueError, AttributeError) as retry_error:
+                # If still broken, preserve the old folder for inspection.
+                backup_dir = f"{persist_dir}_corrupt_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+                logger.warning(
+                    "ChromaDB retry failed (%s). Backing up DB to %s and recreating...",
+                    retry_error,
+                    backup_dir,
+                )
+                try:
+                    shutil.move(persist_dir, backup_dir)
+                except Exception:
+                    # Fallback to delete only if moving backup fails.
+                    logger.warning("Failed to back up corrupt ChromaDB. Falling back to reset.")
+                    shutil.rmtree(persist_dir, ignore_errors=True)
+
             Path(persist_dir).mkdir(parents=True, exist_ok=True)
             self._client = chromadb.PersistentClient(path=persist_dir)
             self._collection = self._client.get_or_create_collection(
@@ -99,6 +124,40 @@ class ChromaStore:
             )
         return hits
 
+    def search_with_embeddings(
+        self,
+        query_embedding: List[float],
+        top_k: int = 30,
+        where: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return top-k most similar chunks **with their embedding vectors**.
+
+        Used by the optimizer to compute inter-document similarities
+        without re-embedding.
+        """
+        kwargs: Dict[str, Any] = {
+            "query_embeddings": [query_embedding],
+            "n_results": top_k,
+            "include": ["documents", "metadatas", "distances", "embeddings"],
+        }
+        if where:
+            kwargs["where"] = where
+
+        results = self._collection.query(**kwargs)
+
+        hits: List[Dict[str, Any]] = []
+        for i in range(len(results["ids"][0])):
+            hits.append(
+                {
+                    "chunk_id": results["ids"][0][i],
+                    "text": results["documents"][0][i],
+                    "metadata": results["metadatas"][0][i],
+                    "score": 1 - results["distances"][0][i],  # cosine → similarity
+                    "embedding": results["embeddings"][0][i],
+                }
+            )
+        return hits
+
     def delete_document(self, doc_id: str) -> int:
         """Delete all chunks belonging to a document. Returns count deleted."""
         existing = self._collection.get(where={"doc_id": doc_id})
@@ -129,16 +188,19 @@ class ChromaStore:
 
     # ── Chat Histories ────────────────────────────────────────
 
-    def save_chat(self, session_id: str, title: str, messages: list) -> None:
+    def save_chat(self, session_id: str, title: str, messages: list, doc_id: str | None = None) -> None:
         import json
         from datetime import datetime
+
+        scope_doc_id = doc_id or "__all__"
         self._chat_collection.upsert(
             ids=[session_id],
             embeddings=[[0.0] * 384],  # Dummy embedding to bypass default model
             documents=[json.dumps(messages)],
             metadatas=[{
                 "title": title,
-                "updated_at": datetime.utcnow().isoformat()
+                "updated_at": datetime.utcnow().isoformat(),
+                "doc_id": scope_doc_id,
             }]
         )
 
@@ -147,20 +209,31 @@ class ChromaStore:
         results = self._chat_collection.get(ids=[session_id])
         if not results["ids"]:
             return None
+
+        raw_doc_id = results["metadatas"][0].get("doc_id", "__all__")
+        doc_id = None if raw_doc_id == "__all__" else raw_doc_id
+
         return {
             "session_id": results["ids"][0],
             "title": results["metadatas"][0]["title"],
-            "messages": json.loads(results["documents"][0])
+            "messages": json.loads(results["documents"][0]),
+            "doc_id": doc_id,
         }
 
-    def list_chats(self) -> list:
+    def list_chats(self, doc_id: str | None = None) -> list:
         results = self._chat_collection.get(include=["metadatas"])
         chats = []
+        requested_scope = doc_id or "__all__"
         for i, sid in enumerate(results["ids"]):
+            raw_doc_id = results["metadatas"][i].get("doc_id", "__all__")
+            if raw_doc_id != requested_scope:
+                continue
+
             chats.append({
                 "session_id": sid,
                 "title": results["metadatas"][i]["title"],
-                "updated_at": results["metadatas"][i]["updated_at"]
+                "updated_at": results["metadatas"][i]["updated_at"],
+                "doc_id": None if raw_doc_id == "__all__" else raw_doc_id,
             })
         chats.sort(key=lambda x: x["updated_at"], reverse=True)
         return chats

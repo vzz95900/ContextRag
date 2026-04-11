@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ContextAware — AI Document Intelligence</title>
+  <meta name="description" content="AI-powered document intelligence with source-grounded answers">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+</head>
+<body>
+<!-- Animated Background -->
+<div class="bg-mesh"></div>
+
+<div class="app-layout">
+
+  <!-- ═══ SIDEBAR (GLASS PANEL) ═══ -->
+  <aside class="sidebar glass-panel" id="sidebar">
+    <div class="p-5 flex flex-col h-full gap-4 relative">
+      
+      <!-- Close mobile btn -->
+      <button class="md:hidden absolute top-4 right-4 text-gray-400 hover:text-gray-800 dark:hover:text-white" onclick="toggleSidebar()">✕</button>
+
+      <!-- Brand -->
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0f172a] to-[#334155] dark:from-[#38bdf8] dark:to-[#818cf8] flex items-center justify-center shadow-xl shadow-slate-500/20 group hover:rotate-[15deg] transition-all duration-300 border border-slate-300 dark:border-white/20">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-slate-800 dark:text-white">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <circle cx="12" cy="14" r="3"></circle>
+              <path d="M12 11v-1"></path>
+              <path d="M12 18v-1"></path>
+              <path d="M9 14H8"></path>
+              <path d="M16 14h-1"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-black tracking-tight uppercase text-slate-800 dark:text-white">Context<span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-indigo-500">Aware</span></h1>
+          </div>
+        </div>
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" class="theme-toggle btn-glass" onclick="toggleTheme()">☀️</button>
+      </div>
+
+      <!-- Chat History (scoped to active doc) -->
+      <div class="mt-2 flex-1 flex flex-col" id="chatHistorySection">
+        <div class="text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3 pl-1">Recent Conversations</div>
+        <button onclick="newChat()" class="w-full py-3 px-4 rounded-xl btn-glass flex justify-between items-center mb-3 group hover:shadow-lg transition-all border border-[var(--glass-border)]">
+          <span class="font-bold text-[var(--text-main)] group-hover:text-indigo-500 transition-colors">Start New Chat</span> <span class="bg-indigo-500/10 text-indigo-500 rounded p-1 group-hover:rotate-12 transition-transform">✨</span>
+        </button>
+        <div id="chatList" class="flex-1 overflow-y-auto space-y-2 pr-1">
+          <div class="text-xs text-center py-8 text-[var(--text-muted)] leading-relaxed">No past chats.<br>Select a document from the gateway to begin.</div>
+        </div>
+      </div>
+      
+      <!-- Nav -->
+      <div class="pt-3 border-t border-[var(--glass-border)] flex gap-2">
+        <a href="/static/roadmap.html" class="flex-1 text-center py-2 text-xs font-semibold rounded-xl btn-glass">Roadmap</a>
+        <a href="/static/change.html" class="flex-1 text-center py-2 text-xs font-semibold rounded-xl btn-glass">Algorithm Shift</a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ═══ MAIN AREA ═══ -->
+  <main class="main-area glass-panel">
+
+    <!-- Header / Active Doc Bar -->
+    <div class="h-16 border-b border-[var(--glass-border)] flex items-center justify-between px-6 backdrop-blur-md z-10 sticky top-0">
+      <div class="flex items-center gap-3">
+        <button class="md:hidden btn-glass w-10 h-10 flex items-center justify-center p-0 rounded-xl" onclick="toggleSidebar()">☰</button>
+        <div id="activeDocBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--glass-bg)] border border-[var(--glass-border)]">
+          <span class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">No document selected</span>
+        </div>
+      </div>
+      <div id="optimizerBadge" class="hidden sm:flex text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 items-center gap-1.5" style="display:none;">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Multi-Objective Optimizer Active
+      </div>
+    </div>
+
+    <!-- ═══ DOC SELECTION GATEWAY (shown on start) ═══ -->
+    <div class="flex flex-col items-center justify-center flex-1 p-6 text-center" id="docGateway">
+      <div class="w-24 h-24 mb-6 floating flex items-center justify-center rounded-3xl bg-gradient-to-tr from-indigo-500 to-pink-500 shadow-2xl shadow-pink-500/20">
+        <span class="text-4xl text-white">📄</span>
+      </div>
+      <h2 class="text-3xl md:text-4xl font-extrabold mb-3 tracking-tight">Choose a Document to Query</h2>
+      <p class="text-[var(--text-muted)] text-lg max-w-lg mb-8">Each chat session is tied to a specific document for precise, grounded answers.</p>
+      
+      <div class="gateway-options w-full max-w-3xl">
+        <!-- Option 1: Select existing doc -->
+        <div class="gateway-card p-6 text-left flex flex-col justify-center cursor-pointer group" onclick="openDocSearchModal()">
+          <div class="flex items-center gap-4 mb-3">
+            <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">📚</div>
+            <div>
+              <div class="font-bold text-xl text-[var(--text-main)]">Select Document</div>
+              <div class="text-sm text-[var(--text-muted)] mt-1">Search the knowledge base</div>
+            </div>
+          </div>
+          <div class="mt-4 py-3 text-center rounded-xl bg-[var(--primary)] text-white font-bold text-sm shadow-lg shadow-indigo-500/30 group-hover:opacity-90">
+            Open Search 🔍
+          </div>
+        </div>
+
+        <!-- Option 2: Upload new doc -->
+        <div class="gateway-card p-6 text-left flex flex-col justify-center">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-14 h-14 rounded-2xl bg-pink-500/10 flex items-center justify-center text-3xl">⬆️</div>
+            <div>
+              <div class="font-bold text-xl text-[var(--text-main)]">Upload New</div>
+              <div class="text-sm text-[var(--text-muted)] mt-1">Add a PDF to the database</div>
+            </div>
+          </div>
+          <div class="gateway-upload-zone flex-1 flex flex-col justify-center" id="gatewayUploadZone">
+            <input type="file" id="gatewayFileInput" accept=".pdf">
+            <div class="text-[var(--text-main)] font-semibold text-sm">Drop PDF or Click</div>
+            <div class="text-xs text-[var(--text-muted)] mt-1">Max 50MB</div>
+          </div>
+          <div id="gatewayUploadStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CHAT WELCOME (shown after doc is selected) ═══ -->
+    <div class="flex flex-col items-center justify-center flex-1 p-6 text-center welcome" id="welcome" style="display:none;">
+      <div class="w-24 h-24 mb-6 floating flex items-center justify-center rounded-3xl bg-gradient-to-tr from-indigo-500 to-pink-500 shadow-2xl shadow-pink-500/20">
+        <span class="text-4xl text-white">✨</span>
+      </div>
+      <h2 class="text-4xl md:text-5xl font-extrabold mb-3 tracking-tight">How can I help you?</h2>
+      <p class="text-[var(--text-muted)] text-lg max-w-lg mb-2" id="welcomeDocName"></p>
+      
+      <div class="w-full max-w-2xl mt-8">
+        <div class="chat-input-wrapper shadow-2xl border-[1px] border-[var(--glass-border)]">
+          <textarea id="welcomeInput" rows="1" placeholder="Message ContextAware..." autocomplete="off" class="text-lg"></textarea>
+          <button id="welcomeSendBtn" class="send-btn" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-messages" id="chatMessages"></div>
+
+    <!-- Floating Chat Input (initially locked) -->
+    <div class="chat-input-area" id="chatInputArea" style="display:none;">
+      <div class="chat-input-wrapper max-w-4xl mx-auto border-[1px] border-[var(--glass-border)]">
+        <textarea id="chatInput" rows="1" placeholder="Ask a follow-up question..." autocomplete="off"></textarea>
+        <button id="sendBtn" class="send-btn" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<!-- ═══ DOCUMENT SEARCH MODAL ═══ -->
+<div class="modal-overlay hidden" id="docSearchModal" onclick="closeDocSearchModal(event)">
+  <div class="modal-content glass-panel w-full max-w-2xl max-h-[80vh] flex flex-col m-4">
+    <div class="p-5 border-b border-[var(--glass-border)] flex items-center justify-between">
+      <h3 class="text-xl font-bold text-[var(--text-main)]">Knowledge Base</h3>
+      <button onclick="closeDocSearchModal(true)" class="w-8 h-8 rounded-lg bg-[var(--glass-bg)] border border-[var(--glass-border)] text-[var(--text-muted)] flex items-center justify-center hover:text-[var(--text-main)]">✕</button>
+    </div>
+    
+    <div class="p-5 border-b border-[var(--glass-border)]">
+      <div class="relative w-full">
+        <span class="absolute left-3 top-2.5 text-gray-400">🔍</span>
+        <input type="text" id="modalSearchInput" placeholder="Search by filename..." 
+               class="w-full bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl py-2.5 pl-10 pr-4 text-[var(--text-main)] outline-none focus:border-[var(--primary)]"
+               onkeyup="filterModalDocs(this.value)">
+      </div>
+    </div>
+    
+    <div class="flex-1 overflow-y-auto p-3" id="modalDocList">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+<script>
+  function updateThemeIcon() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.getElementById('themeToggleBtn').innerText = isDark ? '🌙' : '☀️';
+  }
+  
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const target = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', target);
+    localStorage.setItem('theme', target);
+    updateThemeIcon();
+  }
+  
+  updateThemeIcon();
+</script>
+</body>
+</html>

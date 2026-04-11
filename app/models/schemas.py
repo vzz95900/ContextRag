@@ -25,6 +25,7 @@ class ChatHistoryInfo(BaseModel):
     session_id: str
     title: str
     updated_at: str
+    doc_id: Optional[str] = None
 
 
 class ChatHistoryListResponse(BaseModel):
@@ -37,6 +38,7 @@ class ChatSessionResponse(BaseModel):
     session_id: str
     title: str
     messages: List[dict]
+    doc_id: Optional[str] = None
 
 
 class SourceCitation(BaseModel):
@@ -57,6 +59,7 @@ class ChatResponse(BaseModel):
     session_id: str
     model: str
     latency_ms: float
+    retrieval_mode: str = "top_k"
 
 
 # ── Documents ───────────────────────────────────────────────

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Roadmap — ContextAware</title>
+  <meta name="description" content="Architecture, pipeline, and technical deep-dive into the ContextAware RAG Engine">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  </script>
+  <style>
+    body { overflow-y: auto; padding: 0; }
+    .page-container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      border-radius: 30px;
+      padding: 3rem;
+      position: relative;
+    }
+    @media (max-width: 768px) {
+      .page-container { margin: 1rem; padding: 1.5rem; border-radius: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Animated Background -->
+  <div class="bg-mesh"></div>
+
+  <div class="page-container mb-12">
+    <!-- Back btn -->
+    <a href="/" class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-main)] hover:text-[var(--primary)] mb-8 btn-glass transition">← Back to Chat</a>
+
+    <!-- Theme Toggle Helper -->
+    <div class="absolute top-8 right-8">
+      <button class="theme-toggle btn-glass text-xl h-12 w-12" onclick="toggleTheme()" id="themeBtn">☀️</button>
+    </div>
+
+    <!-- Hero -->
+    <div class="text-center py-8 mb-10 border-b border-[var(--glass-border)]">
+      <span class="inline-block bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-4 shadow-[0_0_15px_rgba(99,102,241,0.2)]">🔬 Architecture & Systems Design</span>
+      <h1 class="text-5xl font-extrabold tracking-tight mb-4 text-[var(--text-main)]">System <span class="gradient-text">Architecture</span></h1>
+      <p class="text-[var(--text-muted)] mt-2 text-lg max-w-3xl mx-auto">A comprehensive technical overview of the ContextAware Retrieval-Augmented Generation (RAG) framework, detailing ingestion pipelines, retrieval heuristics, and generative orchestration.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-14">
+      <div class="doc-card p-5 text-center">
+        <div class="text-3xl font-extrabold gradient-text">3</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Retrieval Stages</div>
+      </div>
+      <div class="doc-card p-5 text-center">
+        <div class="text-3xl font-extrabold gradient-text">512</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Tokens / Chunk</div>
+      </div>
+      <div class="doc-card p-5 text-center">
+        <div class="text-3xl font-extrabold gradient-text">768</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Embedding Dims</div>
+      </div>
+      <div class="doc-card p-5 text-center">
+        <div class="text-3xl font-extrabold gradient-text">5</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">LLM Providers</div>
+      </div>
+      <div class="doc-card p-5 text-center">
+        <div class="text-3xl font-extrabold gradient-text">10+</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Modules Built</div>
+      </div>
+    </div>
+
+    <!-- Pipeline -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mb-6 border-l-4 border-[var(--primary)] pl-3">Asynchronous Data Processing Pipeline</h2>
+    <p class="text-[var(--text-muted)] mb-8 font-medium">The end-to-end operational flow encompassing document ingestion, semantic embedding, vector indexing, and optimal context retrieval for generative inference.</p>
+
+    <div class="grid md:grid-cols-2 gap-10 mb-14">
+      <!-- Ingestion -->
+      <div class="p-6 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
+        <div class="text-sm font-extrabold text-[var(--primary)] uppercase tracking-widest mb-6 text-center">📥 Phase I: Corpus Ingestion & Indexing</div>
+        <div class="space-y-3">
+          <div class="doc-card p-4"><span class="mr-2 text-xl">📄</span><span class="font-bold text-[var(--text-main)]">1. Document Acquisition</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">Asynchronous file handling via FastAPI multipart/form-data.</div></div>
+          <div class="text-center text-[var(--text-muted)] py-1">↓</div>
+          <div class="doc-card p-4"><span class="mr-2 text-xl">🔍</span><span class="font-bold text-[var(--text-main)]">2. PDF Parsing & Extraction</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">PyMuPDF-driven optical text extraction, preserving spatial metadata and pagination.</div></div>
+          <div class="text-center text-[var(--text-muted)] py-1">↓</div>
+          <div class="doc-card p-4"><span class="mr-2 text-xl">✂️</span><span class="font-bold text-[var(--text-main)]">3. Recursive Text Chunking</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">Semantic boundary splitting algorithm yielding 512-token chunks with 64-token overlap for contextual continuity.</div></div>
+          <div class="text-center text-[var(--text-muted)] py-1">↓</div>
+          <div class="doc-card p-4"><span class="mr-2 text-xl">🔢</span><span class="font-bold text-[var(--text-main)]">4. High-Dimensional Embedding</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">Transformation of textual data into 768-dimensional dense vectors utilizing Gemini-Embedding-001.</div></div>
+          <div class="text-center text-[var(--text-muted)] py-1">↓</div>
+          <div class="doc-card p-4"><span class="mr-2 text-xl">🗄️</span><span class="font-bold text-[var(--text-main)]">5. Persistent Vector Storage</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">Indexing within an isolated ChromaDB HNSW (Hierarchical Navigable Small World) collection optimized for cosine similarity.</div></div>
+        </div>
+      </div>
+
+      <!-- Query -->
+      <div class="p-6 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[0_4px_30px_rgba(0,0,0,0.02)]">
+        <div class="text-sm font-extrabold text-[var(--secondary)] uppercase tracking-widest mb-6 text-center">💬 Phase II: Grounded Retrieval & Generation</div>
+        <div class="space-y-3">
+          <div class="doc-card p-4"><span class="mr-2 text-xl">❓</span><span class="font-bold text-[var(--text-main)]">1. User Query Modeling</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">Semantic mapping of the user's natural language input into the shared vector space.</div></div>
+          <div class="text-center text-[var(--text-muted)] py-1">↓</div>
+          <div class="doc-card p-4"><span class="mr-2 text-xl">🎯</span><span class="font-bold text-[var(--text-main)]">2. Candidate Set Retrieval</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">Efficient Approximate Nearest Neighbor (ANN) search isolating the top 30 potential candidate chunks.</div></div>
+          <div class="text-center text-[var(--text-muted)] py-1">↓</div>
+          <div class="doc-card p-4 border-l-4 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.15)]"><span class="mr-2 text-xl">🧬</span><span class="font-bold text-emerald-600 dark:text-emerald-400">3. Multi-Objective Subset Optimization</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">Algorithmic selection maximizing: f(S) = α·Relevance + β·Coverage + γ·Support — fundamentally mitigating semantic redundancy.</div></div>
+          <div class="text-center text-[var(--text-muted)] py-1">↓</div>
+          <div class="doc-card p-4"><span class="mr-2 text-xl">⚡</span><span class="font-bold text-[var(--text-main)]">4. Cross-Encoder Reranking</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">Secondary validation via ms-marco-MiniLM-L-6-v2 to evaluate strict query-document entailment prior to generation.</div></div>
+          <div class="text-center text-[var(--text-muted)] py-1">↓</div>
+          <div class="doc-card p-4"><span class="mr-2 text-xl">🤖</span><span class="font-bold text-[var(--text-main)]">5. Constrained Generative Inference</span><div class="text-xs text-[var(--text-muted)] mt-1 ml-9">LLaMA 3 70B synthesizes a precise response, strictly constrained by the validated context to eliminate parametic hallucination.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tech Stack -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mb-6 border-l-4 border-[var(--primary)] pl-3">Technology Stack</h2>
+    <p class="text-[var(--text-muted)] mb-8">Key technologies powering each layer of the application.</p>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-14">
+      <div class="doc-card p-5">
+        <div class="text-[10px] font-bold text-indigo-500 mb-2 uppercase tracking-wider">LLM</div>
+        <div class="font-bold text-[var(--text-main)]">Groq LLaMA 3</div>
+        <div class="text-xs text-[var(--text-muted)] mt-1">Google Gemini & OpenAI</div>
+      </div>
+      <div class="doc-card p-5">
+        <div class="text-[10px] font-bold text-violet-500 mb-2 uppercase tracking-wider">Embedding</div>
+        <div class="font-bold text-[var(--text-main)]">gemini-001</div>
+        <div class="text-xs text-[var(--text-muted)] mt-1">768 dim dense vectors</div>
+      </div>
+      <div class="doc-card p-5">
+        <div class="text-[10px] font-bold text-sky-500 mb-2 uppercase tracking-wider">Storage</div>
+        <div class="font-bold text-[var(--text-main)]">ChromaDB</div>
+        <div class="text-xs text-[var(--text-muted)] mt-1">HNSW persistent index</div>
+      </div>
+      <div class="doc-card p-5">
+        <div class="text-[10px] font-bold text-emerald-500 mb-2 uppercase tracking-wider">Backend</div>
+        <div class="font-bold text-[var(--text-main)]">FastAPI</div>
+        <div class="text-xs text-[var(--text-muted)] mt-1">Async Python REST API</div>
+      </div>
+      <div class="doc-card p-5">
+        <div class="text-[10px] font-bold text-amber-500 mb-2 uppercase tracking-wider">Ranking</div>
+        <div class="font-bold text-[var(--text-main)]">ms-marco-L-6</div>
+        <div class="text-xs text-[var(--text-muted)] mt-1">CrossEncoder ranking</div>
+      </div>
+      <div class="doc-card p-5">
+        <div class="text-[10px] font-bold text-pink-500 mb-2 uppercase tracking-wider">Frontend</div>
+        <div class="font-bold text-[var(--text-main)]">HTML & Tailwind JS</div>
+        <div class="text-xs text-[var(--text-muted)] mt-1">Glassmorphic Vanilla DOM</div>
+      </div>
+      <div class="doc-card p-5">
+        <div class="text-[10px] font-bold text-red-500 mb-2 uppercase tracking-wider">Parsing</div>
+        <div class="font-bold text-[var(--text-main)]">PyMuPDF</div>
+        <div class="text-xs text-[var(--text-muted)] mt-1">Text/Meta extraction</div>
+      </div>
+      <div class="doc-card p-5">
+        <div class="text-[10px] font-bold text-teal-500 mb-2 uppercase tracking-wider">Optimizer</div>
+        <div class="font-bold text-[var(--text-main)]">Multi-Obj Greedy</div>
+        <div class="text-xs text-[var(--text-muted)] mt-1">Submodular selection</div>
+      </div>
+    </div>
+
+    <!-- Research Contribution -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mb-6 border-l-4 border-[var(--primary)] pl-3">Original Research Contributions</h2>
+    <p class="text-[var(--text-muted)] mb-8 font-medium">Contrasting the implemented methodology against standard baseline constraints observed in contemporary RAG systems.</p>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-14">
+      <div class="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl shadow-[0_4px_30px_rgba(239,68,68,0.02)]">
+        <div class="font-extrabold text-red-500 mb-4 text-sm uppercase tracking-wider">❌ Standard Baseline: Naïve Top-K Dense Retrieval</div>
+        <ul class="text-sm text-[var(--text-muted)] space-y-3 font-medium">
+          <li class="flex gap-2"><span>•</span> Ranks documents independently by marginal cosine similarity.</li>
+          <li class="flex gap-2"><span>•</span> Fails to account for inter-document semantic overlap across the retrieved set.</li>
+          <li class="flex gap-2"><span>•</span> Frequently populates the context window with clustered, highly redundant text chunks.</li>
+          <li class="flex gap-2"><span>•</span> Induces severe hallucination risk when generative reasoning requires a diverse, multi-perspective synthesis of information.</li>
+        </ul>
+      </div>
+      <div class="p-6 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl shadow-[0_4px_30px_rgba(16,185,129,0.05)]">
+        <div class="font-extrabold text-emerald-600 dark:text-emerald-400 mb-4 text-sm uppercase tracking-wider">✅ Proposed Method: Submodular Context Optimization</div>
+        <ul class="text-sm text-[var(--text-muted)] space-y-3 font-medium">
+          <li class="flex gap-2"><span>•</span> Transitions selection logic from a sorting heuristic to a constrained knapsack optimization sequence.</li>
+          <li class="flex gap-2"><span>•</span> Jointly penalizes semantic redundancy while enforcing query relevance and inter-chunk factual support.</li>
+          <li class="flex gap-2"><span>•</span> Evaluates each candidate dynamically conditioned on the distribution of already-selected chunks.</li>
+          <li class="flex gap-2"><span>•</span> Demonstrably enhances grounding robustness and eliminates systemic generative contradictions.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme');
+      const target = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', target);
+      localStorage.setItem('theme', target);
+      document.getElementById('themeBtn').innerText = target === 'dark' ? '🌙' : '☀️';
+    }
+    document.getElementById('themeBtn').innerText = savedTheme === 'dark' ? '🌙' : '☀️';
+  </script>
+</body>
+</html>
