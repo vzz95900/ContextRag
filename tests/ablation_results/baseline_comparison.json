@@ -1,0 +1,46 @@
+{
+  "topk": {
+    "label": "Top-K",
+    "method": "topk",
+    "num_queries": 25,
+    "avg_rel": 0.6981,
+    "avg_cov": 0.2388,
+    "avg_sup": 0.7201,
+    "avg_diversity": 19.9,
+    "avg_near_dupes": 9.4,
+    "avg_redund_red": 0.0
+  },
+  "hybrid": {
+    "label": "Hybrid (RRF)",
+    "method": "hybrid",
+    "num_queries": 25,
+    "avg_rel": 0.6931,
+    "avg_cov": 0.2373,
+    "avg_sup": 0.7211,
+    "avg_diversity": 20.01,
+    "avg_near_dupes": 8.4,
+    "avg_redund_red": -2.0
+  },
+  "mmr": {
+    "label": "MMR (l=0.5)",
+    "method": "mmr",
+    "num_queries": 25,
+    "avg_rel": 0.6871,
+    "avg_cov": 0.2947,
+    "avg_sup": 0.674,
+    "avg_diversity": 24.3,
+    "avg_near_dupes": 0.6,
+    "avg_redund_red": 95.1
+  },
+  "multiobj": {
+    "label": "Multi-Obj (Ours)",
+    "method": "multiobj",
+    "num_queries": 25,
+    "avg_rel": 0.6932,
+    "avg_cov": 0.2756,
+    "avg_sup": 0.695,
+    "avg_diversity": 22.44,
+    "avg_near_dupes": 2.4,
+    "avg_redund_red": 75.1
+  }
+}

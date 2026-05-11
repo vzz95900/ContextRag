@@ -34,9 +34,9 @@ function activateDocument(docId, docName) {
 
   // Update header badge with exit logic inside
   document.getElementById('activeDocBadge').innerHTML = `
-    <span class="text-xs font-bold text-[var(--tertiary)] uppercase tracking-wider">Querying:</span>
-    <span class="text-sm font-semibold text-[var(--text-main)] truncate max-w-[200px]">📄 ${escapeHtml(docName)}</span>
-    <button onclick="exitDoc()" class="ml-2 w-5 h-5 flex items-center justify-center rounded bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors" title="Change Document">✕</button>
+    <span class="text-xs font-bold text-[#b388ff] uppercase tracking-wider">Querying:</span>
+    <span class="text-sm font-semibold text-white truncate max-w-[200px]">📄 ${escapeHtml(docName)}</span>
+    <button onclick="exitDoc()" class="ml-2 w-5 h-5 flex items-center justify-center rounded bg-[rgba(255,82,82,0.1)] text-[#ff5252] hover:bg-[#ff5252] hover:text-white transition-colors" title="Change Document">✕</button>
   `;
   document.getElementById('optimizerBadge').style.display = '';
 
@@ -322,7 +322,7 @@ function renderDocSearchList(query = '') {
           <div class="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mt-0.5">${d.page_count} pages • ${d.chunk_count} chunks</div>
         </div>
       </div>
-      <span class="text-xs px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white font-bold transition-opacity">Launch</span>
+      <span class="text-xs px-3 py-1.5 rounded-lg bg-[rgba(0,229,255,0.12)] text-[#00e5ff] font-bold transition-opacity border border-[rgba(0,229,255,0.15)]">Launch</span>
     </div>
   `).join('');
 }
@@ -375,7 +375,7 @@ async function uploadFile(file, source = 'sidebar') {
 
   const statusId = source === 'gateway' ? 'gatewayUploadStatus' : 'uploadStatus';
   const status = document.getElementById(statusId);
-  status.innerHTML = `<div class="mt-2 text-xs font-semibold text-indigo-500 animate-pulse text-center">Processing ${escapeHtml(file.name)}...</div>`;
+  status.innerHTML = `<div class="mt-2 text-xs font-semibold text-[#00e5ff] animate-pulse text-center">Processing ${escapeHtml(file.name)}...</div>`;
 
   try {
     const form = new FormData();
@@ -383,7 +383,7 @@ async function uploadFile(file, source = 'sidebar') {
     const resp = await fetch(`${API}/api/upload`, { method: 'POST', body: form });
     if (resp.ok) {
       const data = await resp.json();
-      status.innerHTML = `<div class="mt-2 text-xs font-bold text-emerald-500 text-center">✅ Indexed successfully</div>`;
+      status.innerHTML = `<div class="mt-2 text-xs font-bold text-[#00e676] text-center">✅ Indexed successfully</div>`;
 
       // Reload docs, then auto-activate the uploaded doc
       await loadDocuments();
@@ -394,10 +394,10 @@ async function uploadFile(file, source = 'sidebar') {
     } else {
       let errMsg = 'Upload failed';
       try { const errData = await resp.json(); if (errData.detail) errMsg = errData.detail; } catch (_) {}
-      status.innerHTML = `<div class="mt-2 text-xs font-bold text-red-500 text-center">❌ ${escapeHtml(errMsg)}</div>`;
+      status.innerHTML = `<div class="mt-2 text-xs font-bold text-[#ff5252] text-center">❌ ${escapeHtml(errMsg)}</div>`;
     }
   } catch (e) {
-    status.innerHTML = '<div class="mt-2 text-xs text-red-500 text-center">Connection error</div>';
+    status.innerHTML = '<div class="mt-2 text-xs text-[#ff5252] text-center">Connection error</div>';
   }
 }
 
@@ -419,7 +419,7 @@ async function loadChatHistory() {
       list.innerHTML = chats.map(c => `
         <div class="chat-card p-2.5 flex justify-between items-center group" onclick="loadChat('${c.session_id}')">
           <div class="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text-main)]">${escapeHtml(c.title)}</div>
-          <button class="w-6 h-6 rounded bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 flex-shrink-0 ml-2" onclick="event.stopPropagation();deleteChat('${c.session_id}')">✕</button>
+          <button class="w-6 h-6 rounded bg-[rgba(255,82,82,0.1)] text-[#ff5252] hover:bg-[#ff5252] hover:text-white transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 flex-shrink-0 ml-2" onclick="event.stopPropagation();deleteChat('${c.session_id}')">✕</button>
         </div>
       `).join('');
     } else {

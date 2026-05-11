@@ -1,0 +1,110 @@
+[
+  {
+    "label": "Top-K (no opt)",
+    "alpha": "-",
+    "beta": "-",
+    "gamma": "-",
+    "avg_rel": 0.7035,
+    "avg_cov": 0.2417,
+    "avg_sup": 0.7207,
+    "diversity": 19.9,
+    "near_dupes": 7.6,
+    "redund_reduction": "-"
+  },
+  {
+    "label": "Rel-Only",
+    "alpha": 1.0,
+    "beta": 0.0,
+    "gamma": 0.0,
+    "avg_rel": 0.7035,
+    "avg_cov": 0.2417,
+    "avg_sup": 0.7207,
+    "diversity": 19.9,
+    "near_dupes": 7.6,
+    "redund_reduction": 0.0
+  },
+  {
+    "label": "Cov-Only",
+    "alpha": 0.0,
+    "beta": 1.0,
+    "gamma": 0.0,
+    "avg_rel": 0.6861,
+    "avg_cov": 0.303,
+    "avg_sup": 0.6702,
+    "diversity": 24.54,
+    "near_dupes": 0.0,
+    "redund_reduction": 100.0
+  },
+  {
+    "label": "Sup-Only",
+    "alpha": 0.0,
+    "beta": 0.0,
+    "gamma": 1.0,
+    "avg_rel": 0.6932,
+    "avg_cov": 0.2018,
+    "avg_sup": 0.7659,
+    "diversity": 15.21,
+    "near_dupes": 25.1,
+    "redund_reduction": -265.3
+  },
+  {
+    "label": "Rel-Heavy",
+    "alpha": 0.7,
+    "beta": 0.2,
+    "gamma": 0.1,
+    "avg_rel": 0.7014,
+    "avg_cov": 0.2658,
+    "avg_sup": 0.703,
+    "diversity": 21.53,
+    "near_dupes": 3.7,
+    "redund_reduction": 45.1
+  },
+  {
+    "label": "Balanced",
+    "alpha": 0.5,
+    "beta": 0.3,
+    "gamma": 0.2,
+    "avg_rel": 0.6986,
+    "avg_cov": 0.2769,
+    "avg_sup": 0.6958,
+    "diversity": 22.35,
+    "near_dupes": 1.7,
+    "redund_reduction": 72.6
+  },
+  {
+    "label": "Equal",
+    "alpha": 0.33,
+    "beta": 0.33,
+    "gamma": 0.34,
+    "avg_rel": 0.6986,
+    "avg_cov": 0.2684,
+    "avg_sup": 0.7086,
+    "diversity": 21.59,
+    "near_dupes": 3.1,
+    "redund_reduction": 59.6
+  },
+  {
+    "label": "Cov-Heavy",
+    "alpha": 0.2,
+    "beta": 0.5,
+    "gamma": 0.3,
+    "avg_rel": 0.6912,
+    "avg_cov": 0.2958,
+    "avg_sup": 0.6788,
+    "diversity": 23.79,
+    "near_dupes": 0.2,
+    "redund_reduction": 97.8
+  },
+  {
+    "label": "Sup-Heavy",
+    "alpha": 0.2,
+    "beta": 0.3,
+    "gamma": 0.5,
+    "avg_rel": 0.6967,
+    "avg_cov": 0.2286,
+    "avg_sup": 0.7479,
+    "diversity": 17.37,
+    "near_dupes": 15.7,
+    "redund_reduction": -93.5
+  }
+]

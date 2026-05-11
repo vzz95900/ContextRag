@@ -1,0 +1,15 @@
+\begin{table}[htbp]
+\centering
+\caption{Baseline Comparison over 25 Queries (k=10, N=30)}
+\label{tab:baseline_comparison}
+\begin{tabular}{l | c c c | c c c}
+\hline
+\textbf{Method} & \textbf{Rel} & \textbf{Cov} & \textbf{Sup} & \textbf{Div\%} & \textbf{NDup} & \textbf{RedR\%} \\
+\hline
+Top-K & 0.6981 & 0.2388 & 0.7201 & 19.9 & 9.4 & 0.0 \\
+Hybrid (RRF) & 0.6931 & 0.2373 & 0.7211 & 20.0 & 8.4 & -2.0 \\
+MMR (l=0.5) & 0.6871 & 0.2947 & 0.6740 & 24.3 & 0.6 & 95.1 \\
+\textbf{Multi-Obj (Ours)} & \textbf{0.6932} & \textbf{0.2756} & \textbf{0.6950} & \textbf{22.4} & \textbf{2.4} & \textbf{75.1} \\
+\hline
+\end{tabular}
+\end{table}

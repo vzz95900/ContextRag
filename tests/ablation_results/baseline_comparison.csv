@@ -1,0 +1,5 @@
+label,method,num_queries,avg_rel,avg_cov,avg_sup,avg_diversity,avg_near_dupes,avg_redund_red
+Top-K,topk,25,0.6981,0.2388,0.7201,19.9,9.4,0.0
+Hybrid (RRF),hybrid,25,0.6931,0.2373,0.7211,20.01,8.4,-2.0
+MMR (l=0.5),mmr,25,0.6871,0.2947,0.674,24.3,0.6,95.1
+Multi-Obj (Ours),multiobj,25,0.6932,0.2756,0.695,22.44,2.4,75.1

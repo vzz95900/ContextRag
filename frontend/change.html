@@ -15,74 +15,54 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
   
   <link rel="stylesheet" href="/static/style.css">
-  <script>
-    const savedTheme = localStorage.getItem('theme') || 'dark'; // Inherit from old streamlit script which defaults to dark
-    document.documentElement.setAttribute('data-theme', savedTheme);
-  </script>
   <style>
     body { overflow-y: auto; padding: 0; }
-    .page-container {
-      max-width: 1200px;
-      margin: 2rem auto;
-      background: var(--glass-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--glass-border);
-      box-shadow: var(--glass-shadow);
-      border-radius: 30px;
-      padding: 3rem;
-      position: relative;
-    }
-    @media (max-width: 768px) {
-      .page-container { margin: 1rem; padding: 1.5rem; border-radius: 20px; }
-    }
-    
-    /* Code tabs glassmorphism */
+    /* Code tabs */
     .code-tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--glass-border); margin-bottom: 1rem; }
     .code-tab { padding: 0.8rem 1.5rem; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: all 0.2s; border-bottom: 3px solid transparent; margin-bottom: -2px; }
     .code-tab:hover { color: var(--text-main); }
-    .code-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .code-tab.active { color: #00e5ff; border-bottom-color: #00e5ff; }
     .code-panel { display: none; padding: 0; animation: fadeIn 0.3s; }
     .code-panel.active { display: block; }
     pre.code-block { 
-      background: #0f172a; 
-      border: 1px solid rgba(255,255,255,0.1); 
+      background: rgba(0,0,0,0.5); 
+      border: 1px solid rgba(255,255,255,0.06); 
       border-radius: 12px; 
       padding: 1.5rem; 
       overflow-x: auto; 
       font-family: 'JetBrains Mono', monospace; 
       font-size: 0.85rem; 
       line-height: 1.6; 
-      color: #e2e8f0; 
+      color: #c8ccd0; 
       box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); 
       white-space: pre-wrap;
     }
-    .code-block .comment { color: #64748b; }
-    .code-block .keyword { color: #c084fc; font-weight: bold; }
-    .code-block .function { color: #38bdf8; }
-    .code-block .string { color: #34d399; }
-    .code-block .number { color: #fbbf24; }
+    .code-block .comment { color: #555; }
+    .code-block .keyword { color: #b388ff; font-weight: bold; }
+    .code-block .function { color: #00e5ff; }
+    .code-block .string { color: #00e676; }
+    .code-block .number { color: #ffd740; }
   </style>
 </head>
 <body>
 
-  <!-- Animated Background -->
+  <!-- Particle Canvas -->
+  <canvas id="particleCanvas"></canvas>
+  <!-- Mesh Glow -->
   <div class="bg-mesh"></div>
 
   <div class="page-container mb-12">
     <!-- Back btn -->
-    <a href="/" class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-main)] hover:text-emerald-500 mb-8 btn-glass transition">← Back to Chat</a>
-
-    <!-- Theme Toggle Helper -->
-    <div class="absolute top-8 right-8">
-      <button class="theme-toggle btn-glass text-xl h-12 w-12" onclick="toggleTheme()" id="themeBtn">☀️</button>
-    </div>
+    <a href="/" class="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-main)] hover:text-[#00e5ff] mb-8 btn-glass transition">← Back to Chat</a>
 
     <!-- Hero -->
     <div class="text-center py-8 mb-10 border-b border-[var(--glass-border)]">
-      <span class="inline-block bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-4 shadow-[0_0_15px_rgba(16,185,129,0.2)]">⚡ Formal Optimization Model · Beyond Top-K</span>
-      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 text-[var(--text-main)]">Algorithmic Paradigm Shift</h1>
+      <span class="inline-block bg-[rgba(0,230,118,0.06)] text-[#00e676] border border-[rgba(0,230,118,0.12)] rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-widest mb-4 shadow-[0_0_15px_rgba(0,230,118,0.08)]">⚡ Formal Optimization Model · Beyond Top-K</span>
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4 text-white">Algorithmic Paradigm Shift</h1>
       <p class="text-[var(--text-muted)] mt-2 text-lg max-w-3xl mx-auto">Transitioning from naïve Top-K dense retrieval to multi-objective submodular optimization in ContextAware RAG architectures.</p>
+      <div class="mt-4 inline-flex items-center gap-2 bg-teal-500/10 border border-teal-500/20 rounded-full px-4 py-1.5 text-xs font-bold text-teal-400 uppercase tracking-widest">
+        📊 Evaluated on 8 queries · 283 chunks · Real measured metrics
+      </div>
     </div>
 
     <!-- Stats -->
@@ -96,16 +76,16 @@
         <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Candidate Pool</div>
       </div>
       <div class="doc-card p-5 text-center transition-transform hover:-translate-y-2 border-b-4 border-b-purple-500">
-        <div class="text-3xl font-extrabold text-[var(--text-main)]">O(Nk)</div>
-        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Time Complexity</div>
+        <div class="text-3xl font-extrabold text-[var(--text-main)]">+24%</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Faithfulness Gain</div>
       </div>
       <div class="doc-card p-5 text-center transition-transform hover:-translate-y-2 border-b-4 border-b-amber-500">
-        <div class="text-3xl font-extrabold text-[var(--text-main)]">1-1/e</div>
-        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Approx Guarantee</div>
+        <div class="text-3xl font-extrabold text-[var(--text-main)]">77.5%</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Redundancy Reduced</div>
       </div>
       <div class="doc-card p-5 text-center transition-transform hover:-translate-y-2 border-b-4 border-b-red-500">
-        <div class="text-3xl font-extrabold text-[var(--text-main)]">0%</div>
-        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Redundant Chunks</div>
+        <div class="text-3xl font-extrabold text-[var(--text-main)]">81%</div>
+        <div class="text-xs font-semibold text-[var(--text-muted)] mt-2 uppercase tracking-wide">Grounding Score</div>
       </div>
     </div>
 
@@ -444,7 +424,7 @@ OPTIMIZER_GAMMA=0.2</code></pre>
     <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-sky-500 pl-3">📊 Top-K vs Optimized — Visual Comparison</h2>
     <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">How the optimizer selects a diverse, balanced document set compared to naive top-k</p>
 
-    <div class="grid md:grid-cols-2 gap-8 mb-14">
+    <div class="grid md:grid-cols-2 gap-8 mb-8">
       <div class="p-6 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-xl relative">
         <div id="chart-topk" style="width:100%; height:320px;"></div>
       </div>
@@ -453,9 +433,14 @@ OPTIMIZER_GAMMA=0.2</code></pre>
       </div>
     </div>
 
+    <!-- Per-Query Real Results -->
+    <div class="p-6 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-xl mb-14">
+      <div id="chart-perquery" style="width:100%; height:380px;"></div>
+    </div>
+
     <!-- Impact on Answer Quality Radar Using Plotly.js -->
-    <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-teal-500 pl-3">📈 Impact on Answer Quality</h2>
-    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">How the optimization changes key quality metrics</p>
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-teal-500 pl-3">📈 Impact on Answer Quality — Measured Results</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">Real metrics from evaluation across 8 queries against 283 indexed chunks</p>
 
     <div class="grid md:grid-cols-2 gap-8 mb-14 items-center">
       <div class="p-6 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-xl">
@@ -463,20 +448,20 @@ OPTIMIZER_GAMMA=0.2</code></pre>
       </div>
       <div class="p-6">
         <div class="doc-card p-4 transition-transform hover:-translate-y-1 mb-4">
-            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Evidence Diversity — 92%</p>
-            <p class="text-sm text-[var(--text-muted)]">Coverage objective actively prevents near-duplicate selection, ensuring every chunk brings unique information.</p>
+            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Evidence Diversity — 22.5% <span class="text-emerald-400 text-sm font-semibold">(+2.6% vs Top-K)</span></p>
+            <p class="text-sm text-[var(--text-muted)]">Measured as (1 − mean pairwise cosine similarity) × 100. The optimizer consistently selects more diverse chunks from the candidate pool.</p>
         </div>
         <div class="doc-card p-4 transition-transform hover:-translate-y-1 mb-4">
-            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Redundancy Reduction — 95%</p>
-            <p class="text-sm text-[var(--text-muted)]">The Cov(d|S) formula directly penalizes adding documents similar to what's already selected.</p>
+            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Redundancy Reduction — 77.5%</p>
+            <p class="text-sm text-[var(--text-muted)]">77.5% of near-duplicate pairs (cosine similarity &gt; 0.85) eliminated compared to standard top-k selection.</p>
         </div>
         <div class="doc-card p-4 transition-transform hover:-translate-y-1 mb-4">
-            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Hallucination Resistance — 91%</p>
-            <p class="text-sm text-[var(--text-muted)]">Support scoring ensures selected evidence has cross-document agreement, grounding LLM generation.</p>
+            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Hallucination Resistance — 81.2% <span class="text-emerald-400 text-sm font-semibold">(+24.2% vs Top-K)</span></p>
+            <p class="text-sm text-[var(--text-muted)]">LLM-as-judge faithfulness scoring. Optimized retrieval grounds 81% of generated claims in source context vs 57% for top-k.</p>
         </div>
         <div class="doc-card p-4 transition-transform hover:-translate-y-1 mb-4">
-            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Answer Reliability — 90%</p>
-            <p class="text-sm text-[var(--text-muted)]">Multi-perspective context gives the LLM a broader evidence base, reducing single-source bias.</p>
+            <p class="font-bold text-[var(--text-main)] mb-1">🟢 Answer Reliability — 63.8%</p>
+            <p class="text-sm text-[var(--text-muted)]">LLM-as-judge completeness scoring. Comparable to top-k baseline (66.2%), with tradeoff between breadth of coverage and depth of focus.</p>
         </div>
       </div>
     </div>
@@ -549,13 +534,61 @@ OPTIMIZER_GAMMA=0.2</code></pre>
         </div>
         <div class="grid grid-cols-4 text-sm">
           <div class="p-4 text-[var(--text-main)] font-semibold">Grounding confidence</div>
-          <div class="p-4 text-[var(--text-muted)]">63%</div>
-          <div class="p-4 text-[var(--text-muted)]">89%</div>
-          <div class="p-4 text-emerald-400 font-semibold">+26%</div>
+          <div class="p-4 text-[var(--text-muted)]">57%</div>
+          <div class="p-4 text-[var(--text-muted)]">81%</div>
+          <div class="p-4 text-emerald-400 font-semibold">+24%</div>
         </div>
       </div>
     </div>
 
+    <!-- Evaluation Methodology -->
+    <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-sky-500 pl-3">🔬 Evaluation Methodology</h2>
+    <p class="text-[var(--text-muted)] mb-8 text-sm uppercase tracking-wider font-semibold">How each metric was measured — reproducible with evaluate_quality.py</p>
+
+    <div class="overflow-x-auto mb-8">
+      <div class="min-w-[640px] rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-xl">
+        <div class="grid grid-cols-4 text-xs font-bold uppercase tracking-widest border-b border-[var(--glass-border)]">
+          <div class="p-4 text-[var(--text-main)]">Metric</div>
+          <div class="p-4 text-indigo-400">Method</div>
+          <div class="p-4 text-emerald-400">Formula / Tool</div>
+          <div class="p-4 text-cyan-400">Cost</div>
+        </div>
+        <div class="grid grid-cols-4 text-sm border-b border-[var(--glass-border)]">
+          <div class="p-4 text-[var(--text-main)] font-semibold">Evidence Diversity</div>
+          <div class="p-4 text-[var(--text-muted)]">Embedding Math</div>
+          <div class="p-4 text-[var(--text-muted)] font-mono text-xs">(1 − mean pairwise cos sim) × 100</div>
+          <div class="p-4 text-emerald-400 font-semibold">Free</div>
+        </div>
+        <div class="grid grid-cols-4 text-sm border-b border-[var(--glass-border)]">
+          <div class="p-4 text-[var(--text-main)] font-semibold">Redundancy Reduction</div>
+          <div class="p-4 text-[var(--text-muted)]">Embedding Math</div>
+          <div class="p-4 text-[var(--text-muted)] font-mono text-xs">(topk_dupes − opt_dupes) / topk_dupes</div>
+          <div class="p-4 text-emerald-400 font-semibold">Free</div>
+        </div>
+        <div class="grid grid-cols-4 text-sm border-b border-[var(--glass-border)]">
+          <div class="p-4 text-[var(--text-main)] font-semibold">Hallucination Resistance</div>
+          <div class="p-4 text-[var(--text-muted)]">LLM-as-Judge</div>
+          <div class="p-4 text-[var(--text-muted)] font-mono text-xs">Faithfulness score (0–100)</div>
+          <div class="p-4 text-amber-400 font-semibold">LLM API</div>
+        </div>
+        <div class="grid grid-cols-4 text-sm">
+          <div class="p-4 text-[var(--text-main)] font-semibold">Answer Reliability</div>
+          <div class="p-4 text-[var(--text-muted)]">LLM-as-Judge</div>
+          <div class="p-4 text-[var(--text-muted)] font-mono text-xs">Completeness score (0–100)</div>
+          <div class="p-4 text-amber-400 font-semibold">LLM API</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-sky-500/5 border border-sky-500/20 rounded-2xl p-6 mb-14">
+      <p class="text-sky-400 font-bold text-sm mb-2">🔄 Reproduce These Results</p>
+      <p class="text-[var(--text-muted)] text-sm leading-relaxed">
+        All metrics are generated by <strong class="text-[var(--text-main)] font-mono">tests/evaluate_quality.py</strong>. Run it against your own data:
+      </p>
+      <pre class="mt-3"><code class="language-bash">python tests/evaluate_quality.py              # Full run (all 4 metrics)
+python tests/evaluate_quality.py --skip-llm    # Embedding metrics only (free)
+python tests/evaluate_quality.py --max-queries 3  # Quick test with 3 queries</code></pre>
+    </div>
 
     <!-- Pipeline Before After -->
     <h2 class="text-2xl font-bold text-[var(--text-main)] mt-14 mb-2 border-l-4 border-violet-500 pl-3">🔀 Pipeline Before & After</h2>
@@ -625,26 +658,14 @@ OPTIMIZER_GAMMA=0.2</code></pre>
         }
     }
 
-    function toggleTheme() {
-      const current = document.documentElement.getAttribute('data-theme');
-      const target = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', target);
-      localStorage.setItem('theme', target);
-      document.getElementById('themeBtn').innerText = target === 'dark' ? '🌙' : '☀️';
-      // Rerender plots on theme shift to update gridlines
-      renderPlots();
-    }
-    document.getElementById('themeBtn').innerText = savedTheme === 'dark' ? '🌙' : '☀️';
-
     // PLOTLY JS INTEGRATION
     function renderPlots() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const txtColor = isDark ? '#94a3b8' : '#64748b';
-        const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+        const txtColor = '#8a8f98';
+        const gridColor = 'rgba(255,255,255,0.04)';
         const bgColor = 'rgba(0,0,0,0)';
         const fontFam = 'Inter, sans-serif';
 
-        // Fake Data
+        // Simulated doc relevance scores for visual demonstration
         const n_docs = 15;
         const relevance = [0.95, 0.93, 0.91, 0.90, 0.88, 0.86, 0.84, 0.82, 0.80, 0.78, 0.75, 0.72, 0.70, 0.68, 0.65];
         const xVals = Array.from({length: n_docs}, (_, i) => `D${i+1}`);
@@ -652,8 +673,8 @@ OPTIMIZER_GAMMA=0.2</code></pre>
 
         // === TOP-k CHART ===
         const topk_sel = [0, 1, 2, 3, 4];
-        const colors_topk = Array(n_docs).fill(isDark ? 'rgba(100,116,139,0.3)' : 'rgba(100,116,139,0.1)');
-        const borders_topk = Array(n_docs).fill(isDark ? 'rgba(100,116,139,0.2)' : 'rgba(100,116,139,0.1)');
+        const colors_topk = Array(n_docs).fill('rgba(100,116,139,0.2)');
+        const borders_topk = Array(n_docs).fill('rgba(100,116,139,0.15)');
         topk_sel.forEach(i => { colors_topk[i] = 'rgba(239,68,68,0.85)'; borders_topk[i] = '#ef4444'; });
 
         const traceTopk = {
@@ -676,8 +697,8 @@ OPTIMIZER_GAMMA=0.2</code></pre>
 
         // === OPTIMIZED CHART ===
         const opt_sel = [0, 3, 6, 10, 13];
-        const colors_opt = Array(n_docs).fill(isDark ? 'rgba(100,116,139,0.3)' : 'rgba(100,116,139,0.1)');
-        const borders_opt = Array(n_docs).fill(isDark ? 'rgba(100,116,139,0.2)' : 'rgba(100,116,139,0.1)');
+        const colors_opt = Array(n_docs).fill('rgba(100,116,139,0.2)');
+        const borders_opt = Array(n_docs).fill('rgba(100,116,139,0.15)');
         opt_sel.forEach(i => { colors_opt[i] = 'rgba(16,185,129,0.85)'; borders_opt[i] = '#10b981'; });
 
         const traceOpt = {
@@ -698,13 +719,13 @@ OPTIMIZER_GAMMA=0.2</code></pre>
         Plotly.newPlot('chart-opt', [traceOpt], layoutOpt, {displayModeBar: false, responsive: true});
 
 
-        // === RADAR CHART ===
-        const categories = ["Evidence<br>Diversity", "Information<br>Coverage", "Answer<br>Reliability", "Redundancy<br>Reduction", "Source<br>Spread", "Hallucination<br>Resistance"];
+        // === RADAR CHART (Real Measured Data) ===
+        const categories = ["Evidence<br>Diversity", "Redundancy<br>Reduction", "Answer<br>Reliability", "Hallucination<br>Resistance"];
         const catsCircular = [...categories, categories[0]];
-        const opt_vals = [92, 88, 90, 95, 87, 91, 92];
-        const topk_vals = [40, 55, 60, 30, 45, 50, 40];
+        const opt_vals = [22.5, 77.5, 63.8, 81.2, 22.5];
+        const topk_vals = [19.9, 0, 66.2, 57.0, 19.9];
 
-        const polarGridColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+        const polarGridColor = 'rgba(255,255,255,0.06)';
 
         const traceRadarOpt = {
             type: 'scatterpolar', r: opt_vals, theta: catsCircular, fill: 'toself',
@@ -713,8 +734,8 @@ OPTIMIZER_GAMMA=0.2</code></pre>
         };
         const traceRadarTopk = {
             type: 'scatterpolar', r: topk_vals, theta: catsCircular, fill: 'toself',
-            name: 'Standard Top-K RAG', fillcolor: isDark ? 'rgba(100,116,139,0.15)' : 'rgba(100,116,139,0.05)',
-            line: {color: isDark ? '#64748b' : '#94a3b8', width: 2, dash: 'dash'}, marker: {size: 6, color: isDark ? '#64748b' : '#94a3b8'}
+            name: 'Standard Top-K RAG', fillcolor: 'rgba(100,116,139,0.1)',
+            line: {color: '#555', width: 2, dash: 'dash'}, marker: {size: 6, color: '#555'}
         };
 
         const layoutRadar = {
@@ -728,11 +749,63 @@ OPTIMIZER_GAMMA=0.2</code></pre>
             legend: { orientation: "h", y: -0.15, font: {size: 11} }
         };
         Plotly.newPlot('chart-radar', [traceRadarOpt, traceRadarTopk], layoutRadar, {displayModeBar: false, responsive: true});
+
+
+        // === PER-QUERY RESULTS CHART (Real Evaluation Data) ===
+        const queryLabels = ['Q1: LLM<br>Hallucinations', 'Q2: Dense vs<br>Sparse', 'Q3: Chunking<br>Strategy', 'Q4: RAG<br>Evaluation', 'Q5: Vector<br>Databases', 'Q6: Reranking<br>Role', 'Q7: Embedding<br>Models', 'Q8: Context<br>Window'];
+        const topkDiversity = [19.5, 20.9, 19.2, 18.4, 18.5, 20.9, 22.6, 19.3];
+        const optDiversity =  [22.6, 22.6, 21.2, 21.4, 23.7, 22.1, 24.1, 22.8];
+        const redReduction =  [66.7, 100,  25.0, 92.9, 90.0, 87.5, 80.0, 77.8];
+
+        const traceTopkDiv = {
+            x: queryLabels, y: topkDiversity, type: 'bar', name: 'Top-K Diversity',
+            marker: { color: 'rgba(239,68,68,0.7)' },
+            hovertemplate: '<b>%{x}</b><br>Top-K Diversity: %{y:.1f}%<extra></extra>'
+        };
+        const traceOptDiv = {
+            x: queryLabels, y: optDiversity, type: 'bar', name: 'Optimized Diversity',
+            marker: { color: 'rgba(16,185,129,0.8)' },
+            hovertemplate: '<b>%{x}</b><br>Optimized Diversity: %{y:.1f}%<extra></extra>'
+        };
+        const traceRedLine = {
+            x: queryLabels, y: redReduction, type: 'scatter', mode: 'lines+markers',
+            name: 'Redundancy Reduction %', yaxis: 'y2',
+            line: { color: '#f59e0b', width: 3 }, marker: { size: 8, color: '#f59e0b' },
+            hovertemplate: '<b>%{x}</b><br>Redundancy Reduction: %{y:.1f}%<extra></extra>'
+        };
+
+        const layoutPerQuery = {
+            title: { text: '📊 Per-Query Evaluation Results (Real Data)', font: { size: 16, color: txtColor, family: fontFam } },
+            paper_bgcolor: bgColor, plot_bgcolor: bgColor, font: { family: fontFam, color: txtColor, size: 11 },
+            barmode: 'group', bargap: 0.2, bargroupgap: 0.1,
+            margin: { l: 50, r: 50, t: 50, b: 80 },
+            xaxis: { tickfont: { size: 9 }, showgrid: false },
+            yaxis: { title: 'Diversity %', gridcolor: gridColor, range: [0, 35] },
+            yaxis2: { title: 'Redundancy Reduction %', overlaying: 'y', side: 'right', range: [0, 110], gridcolor: 'transparent' },
+            legend: { orientation: 'h', y: -0.25, font: { size: 10 } },
+        };
+        Plotly.newPlot('chart-perquery', [traceTopkDiv, traceOptDiv, traceRedLine], layoutPerQuery, { displayModeBar: false, responsive: true });
     }
 
     // Initial render
     setTimeout(renderPlots, 100);
 
+  </script>
+
+  <!-- Particle Animation -->
+  <script>
+  (function() {
+    const canvas = document.getElementById('particleCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    const N = 45, D = 100;
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize(); window.addEventListener('resize', resize);
+    class P { constructor() { this.x=Math.random()*canvas.width; this.y=Math.random()*canvas.height; this.vx=(Math.random()-0.5)*0.2; this.vy=(Math.random()-0.5)*0.2; this.r=Math.random()*1.2+0.3; this.o=Math.random()*0.2+0.05; } update() { this.x+=this.vx; this.y+=this.vy; if(this.x<0||this.x>canvas.width)this.vx*=-1; if(this.y<0||this.y>canvas.height)this.vy*=-1; } draw() { ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fillStyle=`rgba(0,229,255,${this.o})`; ctx.fill(); } }
+    for(let i=0;i<N;i++) particles.push(new P());
+    function anim() { ctx.clearRect(0,0,canvas.width,canvas.height); for(let i=0;i<particles.length;i++){particles[i].update();particles[i].draw();for(let j=i+1;j<particles.length;j++){const dx=particles[i].x-particles[j].x,dy=particles[i].y-particles[j].y,d=Math.sqrt(dx*dx+dy*dy);if(d<D){ctx.beginPath();ctx.moveTo(particles[i].x,particles[i].y);ctx.lineTo(particles[j].x,particles[j].y);ctx.strokeStyle=`rgba(0,229,255,${(1-d/D)*0.05})`;ctx.lineWidth=0.5;ctx.stroke();}}} requestAnimationFrame(anim); }
+    anim();
+  })();
   </script>
 </body>
 </html>

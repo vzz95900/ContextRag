@@ -1,0 +1,20 @@
+\begin{table}[htbp]
+\centering
+\caption{Weight Sensitivity Ablation — Impact of $\alpha$, $\beta$, $\gamma$ on Retrieval Quality}
+\label{tab:weight_ablation}
+\begin{tabular}{l c c c | c c c | c c}
+\hline
+\textbf{Config} & $\alpha$ & $\beta$ & $\gamma$ & \textbf{Rel} & \textbf{Cov} & \textbf{Sup} & \textbf{Diversity\%} & \textbf{RedRed\%} \\
+\hline
+Top-K (no opt) & — & — & — & 0.7035 & 0.2417 & 0.7207 & 19.9 & — \\
+Rel-Only & 1.00 & 0.00 & 0.00 & 0.7035 & 0.2417 & 0.7207 & 19.9 & 0.0 \\
+Cov-Only & 0.00 & 1.00 & 0.00 & 0.6861 & 0.3030 & 0.6702 & 24.5 & 100.0 \\
+Sup-Only & 0.00 & 0.00 & 1.00 & 0.6932 & 0.2018 & 0.7659 & 15.2 & -265.3 \\
+Rel-Heavy & 0.70 & 0.20 & 0.10 & 0.7014 & 0.2658 & 0.7030 & 21.5 & 45.1 \\
+\textbf{Balanced} & \textbf{0.50} & \textbf{0.30} & \textbf{0.20} & \textbf{0.6986} & \textbf{0.2769} & \textbf{0.6958} & \textbf{22.4} & \textbf{72.6} \\
+Equal & 0.33 & 0.33 & 0.34 & 0.6986 & 0.2684 & 0.7086 & 21.6 & 59.6 \\
+Cov-Heavy & 0.20 & 0.50 & 0.30 & 0.6912 & 0.2958 & 0.6788 & 23.8 & 97.8 \\
+Sup-Heavy & 0.20 & 0.30 & 0.50 & 0.6967 & 0.2286 & 0.7479 & 17.4 & -93.5 \\
+\hline
+\end{tabular}
+\end{table}

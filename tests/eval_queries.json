@@ -1,0 +1,42 @@
+[
+  {
+    "query": "What are the main causes of LLM hallucinations and how can teams reduce them in production?",
+    "expected_topics": ["retrieval quality", "prompt ambiguity", "grounding", "temperature", "verification"]
+  },
+  {
+    "query": "Explain the difference between dense retrieval and sparse retrieval methods.",
+    "expected_topics": ["embeddings", "BM25", "cosine similarity", "keyword matching", "hybrid"]
+  },
+  {
+    "query": "How does chunking strategy affect RAG system performance?",
+    "expected_topics": ["chunk size", "overlap", "token count", "context window", "retrieval accuracy"]
+  },
+  {
+    "query": "What are the best practices for evaluating a RAG pipeline?",
+    "expected_topics": ["faithfulness", "relevance", "context precision", "recall", "metrics"]
+  },
+  {
+    "query": "How do vector databases store and retrieve embeddings efficiently?",
+    "expected_topics": ["indexing", "HNSW", "approximate nearest neighbor", "cosine distance", "storage"]
+  },
+  {
+    "query": "What is the role of reranking in a retrieval pipeline?",
+    "expected_topics": ["cross-encoder", "relevance scoring", "precision", "two-stage retrieval"]
+  },
+  {
+    "query": "Compare different embedding models for document retrieval tasks.",
+    "expected_topics": ["sentence transformers", "OpenAI embeddings", "Gemini", "dimensionality", "performance"]
+  },
+  {
+    "query": "How can context window limitations be addressed in large document QA?",
+    "expected_topics": ["chunking", "summarization", "hierarchical retrieval", "token limits", "compression"]
+  },
+  {
+    "query": "What security considerations exist when building RAG systems?",
+    "expected_topics": ["prompt injection", "data leakage", "access control", "PII", "sanitization"]
+  },
+  {
+    "query": "Explain how hybrid search combines dense and sparse retrieval for better results.",
+    "expected_topics": ["reciprocal rank fusion", "BM25", "vector search", "complementary strengths", "weighting"]
+  }
+]
