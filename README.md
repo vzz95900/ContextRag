@@ -1,3 +1,12 @@
+---
+title: Context-Aware RAG Engine
+emoji: 🧠
+colorFrom: purple
+colorTo: blue
+sdk: docker
+pinned: false
+---
+
 # Context-Aware RAG Engine
 
 ⚡ A high-performance, next-generation Semantic Search & QA engine utilizing **Multi-Objective Optimization** to eliminate redundancy and hallucination in RAG pipelines. 

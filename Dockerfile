@@ -17,7 +17,7 @@ COPY . .
 # Create data directories
 RUN mkdir -p data/uploads data/chromadb
 
-EXPOSE 8000
+EXPOSE 7860
 
 # Run uvicorn on port 7860 (default port for Hugging Face Spaces)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
