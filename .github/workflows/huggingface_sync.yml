@@ -1,0 +1,31 @@
+name: Sync to Hugging Face
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Remove binary files for HF Space
+        run: |
+          git config --global user.email "deploy@github.com"
+          git config --global user.name "GitHub Deploy Action"
+          # Remove the tests directory from tracking so the binary PNG is not pushed
+          git rm -r --cached tests/ || true
+          git commit -m "Remove binary files for Hugging Face deployment" || true
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        # TODO: Replace 'YOUR_HF_USERNAME' and 'YOUR_SPACE_NAME' in the command below 
+        # with your actual Hugging Face username and Space name.
+        run: git push --force https://Vizz17:$HF_TOKEN@huggingface.co/spaces/Vizz17/context-aware-rag main
