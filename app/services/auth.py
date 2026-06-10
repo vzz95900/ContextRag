@@ -188,3 +188,26 @@ def cleanup_old_guest_sessions() -> None:
             conn.commit()
     finally:
         conn.close()
+
+def list_registered_users() -> dict:
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT username FROM users")
+        users = [row["username"] for row in cursor.fetchall()]
+        
+        cursor.execute("SELECT username, is_guest, created_at FROM sessions")
+        sessions = [
+            {
+                "username": row["username"],
+                "is_guest": bool(row["is_guest"]),
+                "created_at": row["created_at"]
+            }
+            for row in cursor.fetchall()
+        ]
+        return {
+            "users": users,
+            "active_sessions": sessions
+        }
+    finally:
+        conn.close()

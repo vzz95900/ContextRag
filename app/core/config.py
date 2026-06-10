@@ -63,6 +63,9 @@ class Settings(BaseSettings):
 
     # ── Paths ───────────────────────────────────────────────
     upload_dir: str = "./data/uploads"
+    
+    # ── Admin ───────────────────────────────────────────────
+    admin_secret: str = ""
 
     def ensure_dirs(self) -> None:
         """Create required directories if they don't exist."""

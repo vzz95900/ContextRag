@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
-from fastapi import APIRouter, HTTPException, Depends, status, Request
+from fastapi import APIRouter, HTTPException, Depends, status, Request, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+from app.core.config import settings
 from app.models.schemas import UserAuthRequest, AuthResponse
 from app.services.auth import (
     register_user,
@@ -11,6 +12,7 @@ from app.services.auth import (
     create_guest_session,
     logout_session,
     get_username_from_token,
+    list_registered_users,
 )
 
 logger = logging.getLogger(__name__)
@@ -72,4 +74,22 @@ def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
         return {"message": "Logged out successfully"}
     except Exception as e:
         logger.error(f"Logout error: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/admin/users")
+def get_users_list(secret: str | None = Query(default=None)):
+    """Secret endpoint to list registered users and their session states."""
+    if not settings.admin_secret:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access is disabled because admin_secret is not configured."
+        )
+    if secret != settings.admin_secret:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin secret."
+        )
+    try:
+        return list_registered_users()
+    except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
