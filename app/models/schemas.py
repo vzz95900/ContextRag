@@ -100,3 +100,15 @@ class HealthResponse(BaseModel):
     version: str = "0.1.0"
     vector_store: str = ""
     llm_provider: str = ""
+
+
+# ── Authentication ──────────────────────────────────────────
+
+class UserAuthRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=6, max_length=100)
+
+class AuthResponse(BaseModel):
+    token: str
+    username: str
+    is_guest: bool

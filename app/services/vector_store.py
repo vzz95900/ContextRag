@@ -77,7 +77,7 @@ class ChromaStore:
     def count(self) -> int:
         return self._collection.count()
 
-    def add_chunks(self, chunks: List[Chunk], embeddings: List[List[float]]) -> None:
+    def add_chunks(self, chunks: List[Chunk], embeddings: List[List[float]], user_id: str = "default") -> None:
         """Add chunks with pre-computed embeddings."""
         self._collection.upsert(
             ids=[c.chunk_id for c in chunks],
@@ -90,6 +90,7 @@ class ChromaStore:
                     "page_num": c.page_num,
                     "chunk_index": c.chunk_index,
                     "token_count": c.token_count,
+                    "user_id": user_id,
                 }
                 for c in chunks
             ],
@@ -100,6 +101,7 @@ class ChromaStore:
         query_embedding: List[float],
         top_k: int = 20,
         where: Optional[Dict[str, Any]] = None,
+        user_id: str = "default",
     ) -> List[Dict[str, Any]]:
         """Return top-k most similar chunks."""
         kwargs: Dict[str, Any] = {
@@ -107,8 +109,11 @@ class ChromaStore:
             "n_results": top_k,
             "include": ["documents", "metadatas", "distances"],
         }
+        
+        filter_dict = {"user_id": user_id}
         if where:
-            kwargs["where"] = where
+            filter_dict = {"$and": [{"user_id": user_id}, where]}
+        kwargs["where"] = filter_dict
 
         results = self._collection.query(**kwargs)
 
@@ -129,6 +134,7 @@ class ChromaStore:
         query_embedding: List[float],
         top_k: int = 30,
         where: Optional[Dict[str, Any]] = None,
+        user_id: str = "default",
     ) -> List[Dict[str, Any]]:
         """Return top-k most similar chunks **with their embedding vectors**.
 
@@ -140,8 +146,11 @@ class ChromaStore:
             "n_results": top_k,
             "include": ["documents", "metadatas", "distances", "embeddings"],
         }
+        
+        filter_dict = {"user_id": user_id}
         if where:
-            kwargs["where"] = where
+            filter_dict = {"$and": [{"user_id": user_id}, where]}
+        kwargs["where"] = filter_dict
 
         results = self._collection.query(**kwargs)
 
@@ -158,17 +167,17 @@ class ChromaStore:
             )
         return hits
 
-    def delete_document(self, doc_id: str) -> int:
+    def delete_document(self, doc_id: str, user_id: str = "default") -> int:
         """Delete all chunks belonging to a document. Returns count deleted."""
-        existing = self._collection.get(where={"doc_id": doc_id})
+        existing = self._collection.get(where={"$and": [{"doc_id": doc_id}, {"user_id": user_id}]})
         count = len(existing["ids"])
         if count:
             self._collection.delete(ids=existing["ids"])
         return count
 
-    def list_documents(self) -> List[Dict[str, Any]]:
+    def list_documents(self, user_id: str = "default") -> List[Dict[str, Any]]:
         """Return unique documents in the store."""
-        all_meta = self._collection.get(include=["metadatas"])
+        all_meta = self._collection.get(where={"user_id": user_id}, include=["metadatas"])
         docs: Dict[str, Dict[str, Any]] = {}
         for meta in all_meta["metadatas"]:
             did = meta["doc_id"]
@@ -188,7 +197,7 @@ class ChromaStore:
 
     # ── Chat Histories ────────────────────────────────────────
 
-    def save_chat(self, session_id: str, title: str, messages: list, doc_id: str | None = None) -> None:
+    def save_chat(self, session_id: str, title: str, messages: list, user_id: str = "default", doc_id: str | None = None) -> None:
         import json
         from datetime import datetime
 
@@ -201,12 +210,13 @@ class ChromaStore:
                 "title": title,
                 "updated_at": datetime.utcnow().isoformat(),
                 "doc_id": scope_doc_id,
+                "user_id": user_id,
             }]
         )
 
-    def get_chat(self, session_id: str) -> dict | None:
+    def get_chat(self, session_id: str, user_id: str = "default") -> dict | None:
         import json
-        results = self._chat_collection.get(ids=[session_id])
+        results = self._chat_collection.get(ids=[session_id], where={"user_id": user_id})
         if not results["ids"]:
             return None
 
@@ -220,8 +230,8 @@ class ChromaStore:
             "doc_id": doc_id,
         }
 
-    def list_chats(self, doc_id: str | None = None) -> list:
-        results = self._chat_collection.get(include=["metadatas"])
+    def list_chats(self, user_id: str = "default", doc_id: str | None = None) -> list:
+        results = self._chat_collection.get(where={"user_id": user_id}, include=["metadatas"])
         chats = []
         requested_scope = doc_id or "__all__"
         for i, sid in enumerate(results["ids"]):
@@ -238,8 +248,22 @@ class ChromaStore:
         chats.sort(key=lambda x: x["updated_at"], reverse=True)
         return chats
 
-    def delete_chat(self, session_id: str) -> None:
-        self._chat_collection.delete(ids=[session_id])
+    def delete_chat(self, session_id: str, user_id: str = "default") -> None:
+        results = self._chat_collection.get(ids=[session_id], where={"user_id": user_id})
+        if results["ids"]:
+            self._chat_collection.delete(ids=[session_id])
+
+    def delete_user_data(self, user_id: str) -> None:
+        """Delete all documents, chunks, and chat histories belonging to a specific user."""
+        # 1. Delete all chunks and associated document IDs from main collection
+        existing_docs = self._collection.get(where={"user_id": user_id})
+        if existing_docs["ids"]:
+            self._collection.delete(ids=existing_docs["ids"])
+
+        # 2. Delete all chat histories
+        existing_chats = self._chat_collection.get(where={"user_id": user_id})
+        if existing_chats["ids"]:
+            self._chat_collection.delete(ids=existing_chats["ids"])
 
 
 # ── Factory ─────────────────────────────────────────────────

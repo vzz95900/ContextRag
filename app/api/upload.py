@@ -6,9 +6,10 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile, Depends
 
 from app.core.config import settings
+from app.api.auth import get_current_user
 from app.models.schemas import DocumentInfo, DocumentListResponse, UploadResponse
 from app.services.chunker import chunk_pages
 from app.services.embedder import embed_texts
@@ -19,7 +20,10 @@ router = APIRouter()
 
 
 @router.post("/upload", response_model=UploadResponse)
-def upload_pdf(file: UploadFile = File(...)):
+def upload_pdf(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user)
+):
     """Upload a PDF, parse it, chunk it, embed it, and index it."""
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
@@ -57,7 +61,7 @@ def upload_pdf(file: UploadFile = File(...)):
 
         # 4. Index
         store = get_vector_store()
-        store.add_chunks(chunks, embeddings)
+        store.add_chunks(chunks, embeddings, user_id=user_id)
 
         doc_id = generate_doc_id(str(filepath))
         return UploadResponse(
@@ -74,10 +78,10 @@ def upload_pdf(file: UploadFile = File(...)):
 
 
 @router.get("/documents", response_model=DocumentListResponse)
-def list_documents():
+def list_documents(user_id: str = Depends(get_current_user)):
     """List all indexed documents."""
     store = get_vector_store()
-    docs = store.list_documents()
+    docs = store.list_documents(user_id=user_id)
     return DocumentListResponse(
         documents=[
             DocumentInfo(
@@ -94,10 +98,10 @@ def list_documents():
 
 
 @router.delete("/documents/{doc_id}")
-def delete_document(doc_id: str):
+def delete_document(doc_id: str, user_id: str = Depends(get_current_user)):
     """Remove a document from the vector store."""
     store = get_vector_store()
-    deleted = store.delete_document(doc_id)
+    deleted = store.delete_document(doc_id, user_id=user_id)
     if deleted == 0:
         raise HTTPException(status_code=404, detail="Document not found.")
     return {"message": f"Deleted {deleted} chunks for document {doc_id}"}

@@ -61,6 +61,7 @@ def retrieve(
     query: str,
     top_k: int | None = None,
     filters: Optional[Dict[str, Any]] = None,
+    user_id: str = "default",
 ) -> List[Dict[str, Any]]:
     """
     Full retrieval pipeline:
@@ -78,10 +79,10 @@ def retrieve(
         # Retrieve a larger candidate pool for optimization
         candidate_n = settings.optimizer_candidate_n
         dense_results = store.search_with_embeddings(
-            query_emb, top_k=candidate_n, where=filters,
+            query_emb, top_k=candidate_n, where=filters, user_id=user_id,
         )
     else:
-        dense_results = store.search(query_emb, top_k=top_k, where=filters)
+        dense_results = store.search(query_emb, top_k=top_k, where=filters, user_id=user_id)
 
     if not dense_results:
         return []

@@ -642,3 +642,13 @@ body {
 @media (max-width: 768px) {
   .page-container { margin: 1rem; padding: 1.5rem; border-radius: 18px; }
 }
+
+/* ── Auth Custom Styles ──────────────────────── */
+.animate-fade-in {
+  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#authOverlay {
+  background: rgba(5, 7, 10, 0.85) !important;
+  backdrop-filter: blur(25px) saturate(180%);
+}

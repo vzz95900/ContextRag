@@ -9,15 +9,184 @@ let selectedDocId = null;
 let selectedDocName = null;
 let isLoading = false;
 
+// ── Auth State ──────────────────────────────────────────────
+let token = localStorage.getItem('token') || sessionStorage.getItem('token');
+let username = localStorage.getItem('username') || sessionStorage.getItem('username');
+let isGuest = localStorage.getItem('isGuest') === 'true' || sessionStorage.getItem('isGuest') === 'true';
+
 // ── DOM Ready ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  loadDocuments();
   setupInput();
   setupSidebarUpload();
   setupGatewayUpload();
 
   if (window.innerWidth < 768) {
     document.getElementById('sidebar').classList.add('collapsed');
+  }
+
+  // Check auth
+  if (token) {
+    showApp();
+  } else {
+    document.getElementById('authOverlay').classList.remove('hidden');
+  }
+});
+
+// ── Auth Wrapper for Fetch ──────────────────────────────────
+async function authFetch(url, options = {}) {
+  options.headers = options.headers || {};
+  if (token) {
+    options.headers['Authorization'] = `Bearer ${token}`;
+  }
+  const resp = await fetch(url, options);
+  if (resp.status === 401) {
+    logout();
+  }
+  return resp;
+}
+
+// ── Auth UI & Handlers ──────────────────────────────────────
+let currentAuthTab = 'login';
+
+function switchAuthTab(tab) {
+  currentAuthTab = tab;
+  const tabLogin = document.getElementById('tabLogin');
+  const tabRegister = document.getElementById('tabRegister');
+  const submitBtn = document.getElementById('authSubmitBtn');
+  const errorEl = document.getElementById('authError');
+  
+  errorEl.classList.add('hidden');
+  
+  if (tab === 'login') {
+    tabLogin.className = 'flex-1 py-2 text-sm font-bold rounded-lg text-[#00e5ff] bg-[var(--glass-bg)] transition-all';
+    tabRegister.className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-[var(--text-muted)] hover:text-white transition-all';
+    submitBtn.textContent = 'Sign In';
+  } else {
+    tabRegister.className = 'flex-1 py-2 text-sm font-bold rounded-lg text-[#b388ff] bg-[var(--glass-bg)] transition-all';
+    tabLogin.className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-[var(--text-muted)] hover:text-white transition-all';
+    submitBtn.textContent = 'Create Account';
+  }
+}
+
+async function handleAuthSubmit(e) {
+  e.preventDefault();
+  const usernameInput = document.getElementById('authUsername').value.trim();
+  const passwordInput = document.getElementById('authPassword').value;
+  const errorEl = document.getElementById('authError');
+  
+  errorEl.classList.add('hidden');
+  
+  const endpoint = currentAuthTab === 'login' ? '/api/auth/login' : '/api/auth/register';
+  try {
+    const resp = await fetch(`${API}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: usernameInput, password: passwordInput })
+    });
+    
+    const data = await resp.json();
+    if (resp.ok) {
+      if (currentAuthTab === 'login') {
+        token = data.token;
+        username = data.username;
+        isGuest = false;
+        
+        localStorage.setItem('token', token);
+        localStorage.setItem('username', username);
+        localStorage.setItem('isGuest', 'false');
+        
+        showApp();
+      } else {
+        switchAuthTab('login');
+        errorEl.textContent = 'Registration successful! Please sign in.';
+        errorEl.className = 'text-[#00e676] text-xs font-semibold mt-4 h-4 block';
+        errorEl.classList.remove('hidden');
+      }
+    } else {
+      errorEl.textContent = data.detail || 'Authentication failed';
+      errorEl.className = 'text-red-400 text-xs font-semibold mt-4 h-4 block';
+      errorEl.classList.remove('hidden');
+    }
+  } catch (err) {
+    errorEl.textContent = 'Network error. Cannot reach backend.';
+    errorEl.className = 'text-red-400 text-xs font-semibold mt-4 h-4 block';
+    errorEl.classList.remove('hidden');
+  }
+}
+
+async function handleGuestLogin() {
+  const errorEl = document.getElementById('authError');
+  errorEl.classList.add('hidden');
+  
+  try {
+    const resp = await fetch(`${API}/api/auth/guest`, { method: 'POST' });
+    const data = await resp.json();
+    if (resp.ok) {
+      token = data.token;
+      username = data.username;
+      isGuest = true;
+      
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('username', username);
+      sessionStorage.setItem('isGuest', 'true');
+      
+      showApp();
+    } else {
+      errorEl.textContent = 'Failed to start guest session';
+      errorEl.className = 'text-red-400 text-xs font-semibold mt-4 h-4 block';
+      errorEl.classList.remove('hidden');
+    }
+  } catch (err) {
+    errorEl.textContent = 'Network error. Cannot reach backend.';
+    errorEl.className = 'text-red-400 text-xs font-semibold mt-4 h-4 block';
+    errorEl.classList.remove('hidden');
+  }
+}
+
+function showApp() {
+  const authOverlay = document.getElementById('authOverlay');
+  if (authOverlay) authOverlay.classList.add('hidden');
+  const userDisp = document.getElementById('userDisplay');
+  if (userDisp) userDisp.textContent = isGuest ? 'Guest' : username;
+  loadDocuments();
+}
+
+function handleLogout() {
+  if (token) {
+    fetch(`${API}/api/auth/logout`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    }).catch(() => {});
+  }
+  logout();
+}
+
+function logout() {
+  token = null;
+  username = null;
+  isGuest = false;
+  
+  localStorage.removeItem('token');
+  localStorage.removeItem('username');
+  localStorage.removeItem('isGuest');
+  
+  sessionStorage.removeItem('token');
+  sessionStorage.removeItem('username');
+  sessionStorage.removeItem('isGuest');
+  
+  const authOverlay = document.getElementById('authOverlay');
+  if (authOverlay) authOverlay.classList.remove('hidden');
+  exitDoc();
+}
+
+// Clean up guest sessions when closing the tab
+window.addEventListener('beforeunload', () => {
+  if (token && isGuest) {
+    fetch(`${API}/api/auth/logout`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      keepalive: true
+    });
   }
 });
 
@@ -149,7 +318,7 @@ async function sendMessage(inputId = 'chatInput', btnId = 'sendBtn') {
       filters: { doc_id: selectedDocId },
     };
 
-    const resp = await fetch(`${API}/api/chat`, {
+    const resp = await authFetch(`${API}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -260,7 +429,7 @@ function scrollToBottom() {
 
 async function loadDocuments() {
   try {
-    const resp = await fetch(`${API}/api/documents`);
+    const resp = await authFetch(`${API}/api/documents`);
     if (!resp.ok) throw new Error('API error');
     const data = await resp.json();
     documents = data.documents || [];
@@ -330,7 +499,7 @@ function renderDocSearchList(query = '') {
 async function deleteDoc(docId) {
   if (!confirm('Remove this document from the knowledge base?')) return;
   try {
-    await fetch(`${API}/api/documents/${docId}`, { method: 'DELETE' });
+    await authFetch(`${API}/api/documents/${docId}`, { method: 'DELETE' });
     if (selectedDocId === docId) exitDoc();
     loadDocuments();
   } catch (e) { /* ignore */ }
@@ -380,7 +549,7 @@ async function uploadFile(file, source = 'sidebar') {
   try {
     const form = new FormData();
     form.append('file', file);
-    const resp = await fetch(`${API}/api/upload`, { method: 'POST', body: form });
+    const resp = await authFetch(`${API}/api/upload`, { method: 'POST', body: form });
     if (resp.ok) {
       const data = await resp.json();
       status.innerHTML = `<div class="mt-2 text-xs font-bold text-[#00e676] text-center">✅ Indexed successfully</div>`;
@@ -410,7 +579,7 @@ async function loadChatHistory() {
   if (!selectedDocId) return [];
 
   try {
-    const resp = await fetch(`${API}/api/chats?doc_id=${encodeURIComponent(selectedDocId)}`);
+    const resp = await authFetch(`${API}/api/chats?doc_id=${encodeURIComponent(selectedDocId)}`);
     if (!resp.ok) return [];
     const data = await resp.json();
     const chats = data.sessions || [];
@@ -434,7 +603,7 @@ async function loadChatHistory() {
 
 async function loadChat(id) {
   try {
-    const resp = await fetch(`${API}/api/chats/${id}`);
+    const resp = await authFetch(`${API}/api/chats/${id}`);
     if (!resp.ok) return;
     const data = await resp.json();
     sessionId = id;
@@ -451,7 +620,7 @@ async function loadChat(id) {
 
 async function deleteChat(id) {
   try {
-    await fetch(`${API}/api/chats/${id}`, { method: 'DELETE' });
+    await authFetch(`${API}/api/chats/${id}`, { method: 'DELETE' });
     if (sessionId === id) newChat();
     loadChatHistory();
   } catch (e) {}

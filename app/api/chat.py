@@ -6,9 +6,10 @@ import logging
 import time
 import uuid
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 
 from app.core.config import settings
+from app.api.auth import get_current_user
 from app.models.schemas import ChatRequest, ChatResponse, SourceCitation, ChatHistoryListResponse, ChatSessionResponse
 from app.services.llm_chain import generate_answer
 from app.services.reranker import rerank
@@ -20,7 +21,7 @@ router = APIRouter()
 
 
 @router.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
+def chat(req: ChatRequest, user_id: str = Depends(get_current_user)):
     """Process a user query through the full RAG pipeline."""
     start = time.perf_counter()
 
@@ -37,6 +38,7 @@ def chat(req: ChatRequest):
         candidates = retrieve(
             query=retrieval_query,
             filters=req.filters,
+            user_id=user_id,
         )
         logger.info("Retrieve: %.1fs (%d candidates)", time.perf_counter() - t0, len(candidates))
 
@@ -91,7 +93,7 @@ def chat(req: ChatRequest):
 
         try:
             store = get_vector_store()
-            store.save_chat(session_id, title, updated_history, doc_id=doc_scope_id)
+            store.save_chat(session_id, title, updated_history, user_id=user_id, doc_id=doc_scope_id)
         except Exception as e:
             logger.error(f"Failed to save chat history: {e}")
 
@@ -118,21 +120,24 @@ def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/chats", response_model=ChatHistoryListResponse)
-def list_chats(doc_id: str | None = Query(default=None, description="Filter chat sessions by selected document scope")):
+def list_chats(
+    doc_id: str | None = Query(default=None, description="Filter chat sessions by selected document scope"),
+    user_id: str = Depends(get_current_user)
+):
     """Return all past chat sessions."""
     try:
         store = get_vector_store()
-        sessions = store.list_chats(doc_id=doc_id)
+        sessions = store.list_chats(user_id=user_id, doc_id=doc_id)
         return ChatHistoryListResponse(sessions=sessions)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch chats: {e}")
 
 @router.get("/chats/{session_id}", response_model=ChatSessionResponse)
-def get_chat(session_id: str):
+def get_chat(session_id: str, user_id: str = Depends(get_current_user)):
     """Retrieve a specific chat history."""
     try:
         store = get_vector_store()
-        chat = store.get_chat(session_id)
+        chat = store.get_chat(session_id, user_id=user_id)
         if not chat:
             raise HTTPException(status_code=404, detail="Chat session not found")
         return ChatSessionResponse(**chat)
@@ -142,11 +147,11 @@ def get_chat(session_id: str):
         raise HTTPException(status_code=500, detail=f"Failed to fetch chat: {e}")
 
 @router.delete("/chats/{session_id}")
-def delete_chat(session_id: str):
+def delete_chat(session_id: str, user_id: str = Depends(get_current_user)):
     """Delete a specific chat history."""
     try:
         store = get_vector_store()
-        store.delete_chat(session_id)
+        store.delete_chat(session_id, user_id=user_id)
         return {"status": "deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete chat: {e}")
