@@ -12,6 +12,9 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+from app.core.config import settings
+from app.services.weight_predictor import get_adaptive_weights
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,13 +49,19 @@ def compute_coverage(doc_emb: np.ndarray, selected_embs: List[np.ndarray]) -> fl
     return 1.0 - max_sim
 
 
-def compute_support(doc_emb: np.ndarray, selected_embs: List[np.ndarray]) -> float:
+def compute_support(
+    doc_emb: np.ndarray,
+    selected_embs: List[np.ndarray],
+) -> float:
     """
-    Sup(d, S) = (1 / len(S)) * sum(similarity(d, s)) for all s in S.
+    Sup(d, S) = (1 / len(S)) * sum(support(d, s)) for all s in S.
     If S is empty, Sup(d, S) = 0.
+    
+    Uses cosine similarity to measure inter-document support.
     """
     if not selected_embs:
         return 0.0
+
     total_sim = sum(cosine_similarity(doc_emb, s) for s in selected_embs)
     return total_sim / len(selected_embs)
 
@@ -102,8 +111,17 @@ def optimize_selection(
         compute_relevance(query_emb, emb) for emb in candidate_embs
     ]
 
+    # Adaptive Weights
+    if settings.enable_adaptive_weights:
+        try:
+            alpha, beta, gamma = get_adaptive_weights(query_embedding)
+            logger.debug("Adaptive Weights applied: α=%.3f, β=%.3f, γ=%.3f", alpha, beta, gamma)
+        except Exception as e:
+            logger.warning("Adaptive weights failed (%s), falling back to static.", e)
+
     selected: List[Dict[str, Any]] = []
     selected_embs: List[np.ndarray] = []
+    selected_texts: List[str] = []
     remaining_indices = list(range(len(candidates)))
 
     logger.debug(
@@ -140,11 +158,12 @@ def optimize_selection(
         doc["opt_score"] = best_score
         doc.update(best_components)  # type: ignore[arg-type]
 
-        # Remove the embedding from the output (no longer needed downstream)
+        # Remove the embedding from the output
         doc.pop("embedding", None)
 
         selected.append(doc)
         selected_embs.append(candidate_embs[best_idx])
+        selected_texts.append(candidates[best_idx].get("text", ""))
         remaining_indices.remove(best_idx)
 
     logger.info(

@@ -52,9 +52,12 @@ class Settings(BaseSettings):
     # ── Optimizer (multi-objective retrieval) ───────────────
     enable_optimizer: bool = True
     optimizer_candidate_n: int = 30
-    optimizer_alpha: float = 0.5   # relevance weight
-    optimizer_beta: float = 0.3    # coverage / diversity weight
-    optimizer_gamma: float = 0.2   # support / agreement weight
+    optimizer_alpha: float = 0.5   # relevance weight (fallback)
+    optimizer_beta: float = 0.3    # coverage / diversity weight (fallback)
+    optimizer_gamma: float = 0.2   # support / agreement weight (fallback)
+    
+    enable_adaptive_weights: bool = True
+
 
     # ── API ─────────────────────────────────────────────────
     api_host: str = "0.0.0.0"
